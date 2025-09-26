@@ -18,8 +18,8 @@ router.get('/health', (req, res) => {
 
 // Mount all routes with authentication middleware
 router.use('/users', authMiddleware, userRouter);
-router.use('/students', authMiddleware, studentRouter);
-router.use('/teachers', authMiddleware, teacherRouter);
-router.use('/admins', authMiddleware, adminRouter);
+router.use('/student', authMiddleware, studentRouter);
+router.use('/teacher', authMiddleware, teacherRouter);
+router.use('/admin', authMiddleware, adminRouter);
 
 module.exports = router;

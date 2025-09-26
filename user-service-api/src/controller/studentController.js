@@ -20,6 +20,7 @@ class StudentController {
   async getStudentById(req, res, next) {
     try {
       const { id } = req.params;
+      console.log("id of student ", id) 
       const student = await studentService.getStudentById(id);
       
       res.status(200).json({

@@ -54,7 +54,9 @@ class StudentService {
   // Get student by ID
   async getStudentById(id) {
     try {
-      const student = await Student.findById(id);
+      const student = await Student.findOne({
+        account_id : id
+      });
       if (!student) {
         const error = new Error('Student not found');
         error.statusCode = 404;
