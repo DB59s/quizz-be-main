@@ -81,6 +81,7 @@ NODE_ENV=development
 PORT=3000
 MONGO_URI=mongodb+srv://vuduy050903_db_user:3qHHYv2yylxfhHyg@cluster0.icn9gah.mongodb.net/user_service?retryWrites=true&w=majority&appName=Cluster0
 API_PREFIX=/api/v1
+API_TOKEN=user_service_secret_token_2024
 ```
 
 5. **Start the server**
@@ -131,12 +132,53 @@ npm start
 }
 ```
 
+## Authentication
+
+**All API endpoints require Bearer token authentication.**
+
+### Required Header
+```
+Authorization: Bearer user_service_secret_token_2024
+```
+
+### Authentication Responses
+
+**Success**: Proceed to endpoint
+**Missing Token**:
+```json
+{
+  "success": false,
+  "message": "Access denied. No token provided.",
+  "data": null
+}
+```
+
+**Invalid Token Format**:
+```json
+{
+  "success": false,
+  "message": "Access denied. Invalid token format. Use Bearer <token>",
+  "data": null
+}
+```
+
+**Invalid Token**:
+```json
+{
+  "success": false,
+  "message": "Access denied. Invalid token.",
+  "data": null
+}
+```
+
 ## API Endpoints
 
 ### Base URL
 ```
 http://localhost:3000/api/v1
 ```
+
+**Note**: All endpoints below require the Authorization header with Bearer token.
 
 ### User Management (Gateway Endpoints)
 
@@ -295,6 +337,41 @@ npm start       # Start production server
 - `PORT`: Server port (default: 3000)
 - `MONGO_URI`: MongoDB connection string
 - `API_PREFIX`: API route prefix (default: /api/v1)
+- `API_TOKEN`: Bearer token for API authentication
+
+### API Usage Examples
+
+#### Create Student (cURL)
+```bash
+curl -X POST http://localhost:3000/api/v1/users \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer user_service_secret_token_2024" \
+  -d '{
+    "role": "student",
+    "account_id": "auth_123",
+    "full_name": "Nguyen Van A",
+    "student_code": "SV001",
+    "class_name": "CNTT01",
+    "phone_number": "0123456789"
+  }'
+```
+
+#### Get All Students (cURL)
+```bash
+curl -X GET "http://localhost:3000/api/v1/students?search=nguyen&page=1&limit=10" \
+  -H "Authorization: Bearer user_service_secret_token_2024"
+```
+
+#### Update Student (cURL)
+```bash
+curl -X PUT http://localhost:3000/api/v1/students/60d5f484f8d4c2b4a4f8d4c2 \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer user_service_secret_token_2024" \
+  -d '{
+    "full_name": "Nguyen Van A Updated",
+    "phone_number": "0987654321"
+  }'
+```
 
 ## Integration with Gateway
 

@@ -7,23 +7,30 @@ const teacherSchema = new mongoose.Schema({
     unique: true,
     trim: true
   },
+  email: {
+    type: String,
+    required: [true, 'Email is required'],
+    unique: true,
+    trim: true,
+    lowercase: true
+  },
   full_name: {
     type: String,
-    required: [true, 'Full name is required'],
     trim: true,
-    maxLength: [100, 'Full name cannot exceed 100 characters']
+    maxLength: [100, 'Full name cannot exceed 100 characters'],
+    default: ''
   },
   teacher_code: {
     type: String,
-    required: [true, 'Teacher code is required'],
     unique: true,
+    sparse: true, // Allow null/undefined values
     trim: true,
     uppercase: true
   },
   department: {
     type: String,
-    required: [true, 'Department is required'],
-    trim: true
+    trim: true,
+    default: ''
   },
   phone_number: {
     type: String,
@@ -34,6 +41,10 @@ const teacherSchema = new mongoose.Schema({
       },
       message: 'Invalid phone number format'
     }
+  },
+  profile_completed: {
+    type: Boolean,
+    default: false
   }
 }, {
   timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' },
@@ -44,5 +55,12 @@ const teacherSchema = new mongoose.Schema({
 teacherSchema.index({ full_name: 'text', teacher_code: 'text', department: 'text' });
 teacherSchema.index({ account_id: 1 });
 teacherSchema.index({ teacher_code: 1 });
+teacherSchema.index({ email: 1 });
+
+// Pre-save hook to check if profile is completed
+teacherSchema.pre('save', function(next) {
+  this.profile_completed = !!(this.full_name && this.teacher_code && this.department);
+  next();
+});
 
 module.exports = mongoose.model('Teacher', teacherSchema); 

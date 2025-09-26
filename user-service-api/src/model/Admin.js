@@ -7,11 +7,18 @@ const adminSchema = new mongoose.Schema({
     unique: true,
     trim: true
   },
+  email: {
+    type: String,
+    required: [true, 'Email is required'],
+    unique: true,
+    trim: true,
+    lowercase: true
+  },
   full_name: {
     type: String,
-    required: [true, 'Full name is required'],
     trim: true,
-    maxLength: [100, 'Full name cannot exceed 100 characters']
+    maxLength: [100, 'Full name cannot exceed 100 characters'],
+    default: ''
   },
   phone_number: {
     type: String,
@@ -22,6 +29,10 @@ const adminSchema = new mongoose.Schema({
       },
       message: 'Invalid phone number format'
     }
+  },
+  profile_completed: {
+    type: Boolean,
+    default: false
   }
 }, {
   timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' },
@@ -31,5 +42,12 @@ const adminSchema = new mongoose.Schema({
 // Indexes for search optimization
 adminSchema.index({ full_name: 'text', phone_number: 'text' });
 adminSchema.index({ account_id: 1 });
+adminSchema.index({ email: 1 });
+
+// Pre-save hook to check if profile is completed
+adminSchema.pre('save', function(next) {
+  this.profile_completed = !!(this.full_name);
+  next();
+});
 
 module.exports = mongoose.model('Admin', adminSchema); 

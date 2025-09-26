@@ -1,5 +1,6 @@
 const axios = require('axios');
 const { verifyAccessToken } = require('../utils/jwt');
+const { USER_SERVICE_API_TOKEN } = require('../config/env');
 
 /**
  * API Gateway middleware that handles authentication, authorization and request forwarding
@@ -85,8 +86,8 @@ function gatewayMiddleware(allowedRoles, serviceBaseUrlEnv) {
         'x-account-id': decoded.accountId.toString(),
         'x-user-id': decoded.accountId.toString(),
         'x-user-role': userRole,
-        // Remove the original authorization header if you don't want to forward it
-        // 'authorization': undefined
+        // Add service API token for user service
+        'authorization': `Bearer ${USER_SERVICE_API_TOKEN}`
       };
 
       // Remove host header to avoid conflicts
@@ -183,8 +184,61 @@ function requireRole(roles) {
   };
 }
 
+/**
+ * Make a direct request to user service with proper authentication
+ * @param {string} method - HTTP method (GET, POST, PUT, DELETE)
+ * @param {string} path - Service endpoint path (e.g., '/users')
+ * @param {Object} data - Request data (for POST, PUT requests)
+ * @param {Object} options - Additional options
+ * @returns {Promise} - Axios response
+ */
+async function callUserService(method, path, data = null, options = {}) {
+  const userServiceUrl = process.env.USER_SERVICE_BASEURL;
+  
+  if (!userServiceUrl) {
+    throw new Error('USER_SERVICE_BASEURL not configured');
+  }
+
+  const url = `${userServiceUrl}/api/v1${path}`;
+  
+  const config = {
+    method: method.toLowerCase(),
+    url,
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${USER_SERVICE_API_TOKEN}`,
+      ...options.headers
+    },
+    timeout: 30000,
+    ...options
+  };
+
+  // Add data for POST, PUT, PATCH requests
+  if (['post', 'put', 'patch'].includes(method.toLowerCase()) && data) {
+    config.data = data;
+  }
+
+  console.log(`[Gateway] Calling User Service: ${method} ${url}`);
+  
+  try {
+    const response = await axios(config);
+    return response;
+  } catch (error) {
+    console.error(`[Gateway] User Service call failed:`, error.message);
+    if (error.response) {
+      // Re-throw with response data for proper error handling
+      const serviceError = new Error(error.response.data?.message || 'User service error');
+      serviceError.statusCode = error.response.status;
+      serviceError.response = error.response.data;
+      throw serviceError;
+    }
+    throw error;
+  }
+}
+
 module.exports = {
   gatewayMiddleware,
   authGatewayMiddleware,
   requireRole,
+  callUserService,
 }; 

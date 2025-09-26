@@ -1,5 +1,6 @@
 const express = require('express');
 const authRouter = require('./auth.router');
+const userRouter = require('./user.router');
 
 const router = express.Router();
 
@@ -12,6 +13,7 @@ const router = express.Router();
 
 // Mount all routers
 router.use('/auth', authRouter);
+router.use('/users', userRouter);
 
 /**
  * @swagger
@@ -87,6 +89,7 @@ router.get('/', (req, res) => {
     endpoints: {
       health: '/api/health',
       auth: '/api/auth',
+      users: '/api/users',
       docs: '/api-docs'
     }
   });

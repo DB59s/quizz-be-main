@@ -7,6 +7,7 @@ const {
   isRefreshTokenExpired 
 } = require('../utils/jwt');
 const { googleAuthService } = require('../service');
+const { callUserService } = require('../middlewares/gateway.middleware');
 const { google } = require('googleapis');
 const { 
   GOOGLE_CLIENT_ID, 
@@ -36,8 +37,10 @@ const getRefreshTokenRepository = () => AppDataSource.getRepository('RefreshToke
  * POST /auth/register
  */
 async function register(req, res) {
+  let savedAccount = null;
+  
   try {
-    const { email, password, role = 'user' } = req.body;
+    const { email, password, role = 'student' } = req.body;
 
     // Validate input
     if (!email || !password) {
@@ -68,7 +71,7 @@ async function register(req, res) {
     }
 
     // Validate role
-    const validRoles = ['user', 'teacher', 'admin'];
+    const validRoles = ['student', 'teacher', 'admin'];
     if (!validRoles.includes(role)) {
       return res.status(400).json({
         success: false,
@@ -100,7 +103,31 @@ async function register(req, res) {
       status: 'active'
     });
 
-    const savedAccount = await accountRepo.save(newAccount);
+    savedAccount = await accountRepo.save(newAccount);
+    console.log(`New account created: ${email} with ID: ${savedAccount.id}`);
+
+    // Create user in user service
+    try {
+      const userServiceResponse = await callUserService('POST', '/users', {
+        accountId: savedAccount.id,
+        email: savedAccount.email,
+        role: savedAccount.role
+      });
+
+      console.log(`User created in user service for account: ${savedAccount.id}`);
+    } catch (serviceError) {
+      console.error(`Failed to create user in user service:`, serviceError.message);
+      
+      // Rollback: Delete the account from gateway
+      await accountRepo.remove(savedAccount);
+      console.log(`Rolled back account creation for: ${email}`);
+      
+      return res.status(500).json({
+        success: false,
+        error: 'User creation failed',
+        message: serviceError.response?.message || 'Failed to create user profile. Please try again.'
+      });
+    }
 
     // Generate tokens
     const accessToken = generateAccessToken({
@@ -121,7 +148,7 @@ async function register(req, res) {
 
     await refreshTokenRepo.save(refreshTokenEntity);
 
-    console.log(`New account registered: ${email} with role: ${role}`);
+    console.log(`Registration completed successfully: ${email} with role: ${role}`);
 
     // Return response
     res.status(201).json({
@@ -138,6 +165,18 @@ async function register(req, res) {
 
   } catch (error) {
     console.error('Register error:', error);
+    
+    // Additional rollback if something went wrong after user service call
+    if (savedAccount) {
+      try {
+        const accountRepo = getAccountRepository();
+        await accountRepo.remove(savedAccount);
+        console.log(`Emergency rollback completed for account: ${savedAccount.id}`);
+      } catch (rollbackError) {
+        console.error('Failed to rollback account:', rollbackError);
+      }
+    }
+    
     res.status(500).json({
       success: false,
       error: 'Internal server error',
@@ -464,13 +503,36 @@ async function googleLogin(req, res) {
         email: googleUser.email,
         google_id: googleUser.google_id,
         provider: 'google',
-        role: 'user',
+        role: 'student',
         status: 'active',
         password_hash: null // No password for Google users
       });
 
       account = await accountRepo.save(account);
-      console.log(`New Google account created: ${googleUser.email}`);
+      console.log(`New Google account created: ${googleUser.email} with ID: ${account.id}`);
+
+      // Create user in user service
+      try {
+        const userServiceResponse = await callUserService('POST', '/users', {
+          accountId: account.id,
+          email: account.email,
+          role: account.role
+        });
+
+        console.log(`User created in user service for Google account: ${account.id}`);
+      } catch (serviceError) {
+        console.error(`Failed to create user in user service for Google account:`, serviceError.message);
+        
+        // Rollback: Delete the account from gateway
+        await accountRepo.remove(account);
+        console.log(`Rolled back Google account creation for: ${googleUser.email}`);
+        
+        return res.status(500).json({
+          success: false,
+          error: 'User creation failed',
+          message: serviceError.response?.message || 'Failed to create user profile. Please try again.'
+        });
+      }
     }
 
     // Generate tokens
@@ -619,13 +681,36 @@ async function googleCallback(req, res) {
         email: googleUser.email,
         google_id: googleUser.google_id,
         provider: 'google',
-        role: 'user',
+        role: 'student',
         status: 'active',
         password_hash: null // No password for Google users
       });
 
       account = await accountRepo.save(account);
-      console.log(`New Google account created via callback: ${googleUser.email}`);
+      console.log(`New Google account created via callback: ${googleUser.email} with ID: ${account.id}`);
+
+      // Create user in user service
+      try {
+        const userServiceResponse = await callUserService('POST', '/users', {
+          accountId: account.id,
+          email: account.email,
+          role: account.role
+        });
+
+        console.log(`User created in user service for Google callback account: ${account.id}`);
+      } catch (serviceError) {
+        console.error(`Failed to create user in user service for Google callback:`, serviceError.message);
+        
+        // Rollback: Delete the account from gateway
+        await accountRepo.remove(account);
+        console.log(`Rolled back Google callback account creation for: ${googleUser.email}`);
+        
+        return res.status(500).json({
+          success: false,
+          error: 'User creation failed',
+          message: serviceError.response?.message || 'Failed to create user profile. Please try again.'
+        });
+      }
     }
 
     // Generate tokens

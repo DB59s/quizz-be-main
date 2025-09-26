@@ -35,8 +35,8 @@ const Account = new EntitySchema({
     },
     role: {
       type: 'enum',
-      enum: ['user', 'teacher', 'admin'],
-      default: 'user',
+      enum: ['student', 'teacher', 'admin'],
+      default: 'student',
       nullable: false,
     },
     status: {

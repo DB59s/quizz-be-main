@@ -1,4 +1,5 @@
 const express = require('express');
+const authMiddleware = require('../middleware/authMiddleware');
 const userRouter = require('./userRouter');
 const studentRouter = require('./studentRouter');
 const teacherRouter = require('./teacherRouter');
@@ -15,10 +16,10 @@ router.get('/health', (req, res) => {
   });
 });
 
-// Mount all routes
-router.use('/users', userRouter);
-router.use('/students', studentRouter);
-router.use('/teachers', teacherRouter);
-router.use('/admins', adminRouter);
+// Mount all routes with authentication middleware
+router.use('/users', authMiddleware, userRouter);
+router.use('/students', authMiddleware, studentRouter);
+router.use('/teachers', authMiddleware, teacherRouter);
+router.use('/admins', authMiddleware, adminRouter);
 
 module.exports = router;

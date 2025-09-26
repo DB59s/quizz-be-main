@@ -7,23 +7,30 @@ const studentSchema = new mongoose.Schema({
     unique: true,
     trim: true
   },
+  email: {
+    type: String,
+    required: [true, 'Email is required'],
+    unique: true,
+    trim: true,
+    lowercase: true
+  },
   full_name: {
     type: String,
-    required: [true, 'Full name is required'],
     trim: true,
-    maxLength: [100, 'Full name cannot exceed 100 characters']
+    maxLength: [100, 'Full name cannot exceed 100 characters'],
+    default: ''
   },
   student_code: {
     type: String,
-    required: [true, 'Student code is required'],
     unique: true,
+    sparse: true, // Allow null/undefined values
     trim: true,
     uppercase: true
   },
   class_name: {
     type: String,
-    required: [true, 'Class name is required'],
-    trim: true
+    trim: true,
+    default: ''
   },
   phone_number: {
     type: String,
@@ -34,6 +41,10 @@ const studentSchema = new mongoose.Schema({
       },
       message: 'Invalid phone number format'
     }
+  },
+  profile_completed: {
+    type: Boolean,
+    default: false
   }
 }, {
   timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' },
@@ -44,5 +55,12 @@ const studentSchema = new mongoose.Schema({
 studentSchema.index({ full_name: 'text', student_code: 'text', class_name: 'text' });
 studentSchema.index({ account_id: 1 });
 studentSchema.index({ student_code: 1 });
+studentSchema.index({ email: 1 });
+
+// Pre-save hook to check if profile is completed
+studentSchema.pre('save', function(next) {
+  this.profile_completed = !!(this.full_name && this.student_code && this.class_name);
+  next();
+});
 
 module.exports = mongoose.model('Student', studentSchema); 

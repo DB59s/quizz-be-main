@@ -32,5 +32,8 @@ module.exports = {
   // URL configuration for OAuth callbacks
   API_BASE_URL: process.env.API_BASE_URL || 'http://localhost:8080',
   FRONTEND_URL: process.env.FRONTEND_URL || 'http://localhost:8080',
-  FRONTEND_PATH: process.env.FRONTEND_PATH || '/front-end/index.html'
+  FRONTEND_PATH: process.env.FRONTEND_PATH || '/front-end/index.html',
+
+  // Service API Tokens
+  USER_SERVICE_API_TOKEN: process.env.USER_SERVICE_API_TOKEN || 'user_service_secret_token_2024'
 };

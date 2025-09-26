@@ -10,5 +10,7 @@ module.exports = {
   requireRole: authMiddleware.requireRole,
   // Gateway aliases
   gatewayAuth: gatewayMiddleware.authGatewayMiddleware,
-  gatewayRequireRole: gatewayMiddleware.requireRole
+  gatewayRequireRole: gatewayMiddleware.requireRole,
+  // Service call utilities
+  callUserService: gatewayMiddleware.callUserService
 }; 
