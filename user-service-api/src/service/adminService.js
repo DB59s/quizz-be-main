@@ -4,6 +4,21 @@ class AdminService {
   // Create a new admin
   async createAdmin(adminData) {
     try {
+      // Validate required fields for admin creation
+      if (!adminData.full_name || !adminData.account_id) {
+        const error = new Error('Full name and account_id are required');
+        error.statusCode = 400;
+        throw error;
+      }
+
+      // Check if admin with this account_id already exists
+      const existingAdmin = await Admin.findOne({ account_id: adminData.account_id });
+      if (existingAdmin) {
+        const error = new Error('Admin with this account_id already exists');
+        error.statusCode = 400;
+        throw error;
+      }
+
       const admin = new Admin(adminData);
       return await admin.save();
     } catch (error) {
@@ -63,9 +78,9 @@ class AdminService {
   }
 
   // Get admin by account_id
-  async getAdminByAccountId(accountId) {
+  async getAdminByAccountId(account_id) {
     try {
-      const admin = await Admin.findOne({ account_id: accountId });
+      const admin = await Admin.findOne({ account_id: account_id });
       if (!admin) {
         const error = new Error('Admin not found');
         error.statusCode = 404;
@@ -77,11 +92,11 @@ class AdminService {
     }
   }
 
-  // Update admin
-  async updateAdmin(id, updateData) {
+  // Update admin by account_id
+  async updateAdminByAccountId(account_id, updateData) {
     try {
-      const admin = await Admin.findByIdAndUpdate(
-        id,
+      const admin = await Admin.findOneAndUpdate(
+        { account_id: account_id },
         updateData,
         { new: true, runValidators: true }
       );
@@ -98,10 +113,10 @@ class AdminService {
     }
   }
 
-  // Delete admin
-  async deleteAdmin(id) {
+  // Delete admin by account_id
+  async deleteAdminByAccountId(account_id) {
     try {
-      const admin = await Admin.findByIdAndDelete(id);
+      const admin = await Admin.findOneAndDelete({ account_id: account_id });
       if (!admin) {
         const error = new Error('Admin not found');
         error.statusCode = 404;

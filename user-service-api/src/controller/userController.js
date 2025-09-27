@@ -17,11 +17,11 @@ class UserController {
     }
   }
 
-  // GET /users/:accountId/:role - Get user by account ID and role
+  // GET /users/:account_id/:role - Get user by account ID and role
   async getUserByAccountId(req, res, next) {
     try {
-      const { accountId, role } = req.params;
-      const user = await userService.getUserByAccountId(accountId, role);
+      const { account_id, role } = req.params;
+      const user = await userService.getUserByAccountId(account_id, role);
       
       res.status(200).json({
         success: true,

@@ -211,7 +211,7 @@ POST /users
 
 #### Get User by Account ID and Role
 ```http
-GET /users/:accountId/:role
+GET /users/:account_id/:role
 ```
 
 ### Student Endpoints

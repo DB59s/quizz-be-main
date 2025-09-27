@@ -4,6 +4,28 @@ class TeacherService {
   // Create a new teacher
   async createTeacher(teacherData) {
     try {
+      // Validate required fields for teacher creation by admin
+      if (!teacherData.full_name || !teacherData.account_id) {
+        const error = new Error('Full name and account_id are required');
+        error.statusCode = 400;
+        throw error;
+      }
+
+      // For admin-created teachers, department is required
+      if (!teacherData.department) {
+        const error = new Error('Department (nơi giảng dạy) is required for teacher');
+        error.statusCode = 400;
+        throw error;
+      }
+
+      // Check if teacher with this account_id already exists
+      const existingTeacher = await Teacher.findOne({ account_id: teacherData.account_id });
+      if (existingTeacher) {
+        const error = new Error('Teacher with this account_id already exists');
+        error.statusCode = 400;
+        throw error;
+      }
+
       const teacher = new Teacher(teacherData);
       return await teacher.save();
     } catch (error) {
@@ -67,9 +89,9 @@ class TeacherService {
   }
 
   // Get teacher by account_id
-  async getTeacherByAccountId(accountId) {
+  async getTeacherByAccountId(account_id) {
     try {
-      const teacher = await Teacher.findOne({ account_id: accountId });
+      const teacher = await Teacher.findOne({ account_id: account_id });
       if (!teacher) {
         const error = new Error('Teacher not found');
         error.statusCode = 404;
@@ -81,11 +103,11 @@ class TeacherService {
     }
   }
 
-  // Update teacher
-  async updateTeacher(id, updateData) {
+  // Update teacher by account_id
+  async updateTeacherByAccountId(account_id, updateData) {
     try {
-      const teacher = await Teacher.findByIdAndUpdate(
-        id,
+      const teacher = await Teacher.findOneAndUpdate(
+        { account_id: account_id },
         updateData,
         { new: true, runValidators: true }
       );
@@ -102,10 +124,10 @@ class TeacherService {
     }
   }
 
-  // Delete teacher
-  async deleteTeacher(id) {
+  // Delete teacher by account_id
+  async deleteTeacherByAccountId(account_id) {
     try {
-      const teacher = await Teacher.findByIdAndDelete(id);
+      const teacher = await Teacher.findOneAndDelete({ account_id: account_id });
       if (!teacher) {
         const error = new Error('Teacher not found');
         error.statusCode = 404;

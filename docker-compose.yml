@@ -1,0 +1,128 @@
+services:
+  # MySQL Database for Gateway API
+  mysql:
+    image: mysql:8.0
+    container_name: quiz_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: gateway_db
+      MYSQL_USER: gateway_user
+      MYSQL_PASSWORD: gateway_password
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./mysql-init:/docker-entrypoint-initdb.d
+    networks:
+      - quiz_network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+  # MongoDB for User Service API
+  mongodb:
+    image: mongo:6.0
+    container_name: quiz_mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: adminpassword
+      MONGO_INITDB_DATABASE: user_service
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+      - ./mongo-init:/docker-entrypoint-initdb.d
+    networks:
+      - quiz_network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      timeout: 20s
+      retries: 10
+
+  # Gateway API Service
+  gateway-api:
+    build:
+      context: ./gateway-api
+      dockerfile: Dockerfile
+    container_name: quiz_gateway_api
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      # Database configuration for MySQL
+      DB_TYPE: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USERNAME: gateway_user
+      DB_PASSWORD: gateway_password
+      DB_DATABASE: gateway_db
+      DB_SYNCHRONIZE: true
+      DB_LOGGING: false
+      # JWT configuration
+      JWT_SECRET: your-super-secret-jwt-key-change-this-in-production
+      JWT_EXPIRES_IN: 15m
+      REFRESH_TOKEN_EXPIRES_DAYS: 7
+      # API Gateway configuration
+      USER_SERVICE_BASEURL: http://user-service-api:3000
+      USER_SERVICE_API_TOKEN: user_service_secret_token_2024
+      # Frontend URL configuration
+      API_BASE_URL: http://localhost:8080
+      FRONTEND_URL: http://localhost:8080
+    ports:
+      - "8080:3000"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - quiz_network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/", "||", "exit", "1"]
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # User Service API
+  user-service-api:
+    build:
+      context: ./user-service-api
+      dockerfile: Dockerfile
+    container_name: quiz_user_service_api
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      # MongoDB configuration
+      MONGO_URI: mongodb://admin:adminpassword@mongodb:27017/user_service?authSource=admin
+      # API configuration
+      API_PREFIX: /api/v1
+      API_TOKEN: user_service_secret_token_2024
+    ports:
+      - "3001:3000"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - quiz_network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/", "||", "exit", "1"]
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+# Named volumes for data persistence
+volumes:
+  mysql_data:
+    driver: local
+  mongo_data:
+    driver: local
+
+# Networks
+networks:
+  quiz_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

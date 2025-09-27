@@ -32,15 +32,15 @@ class UserService {
   }
 
   // Get user by account_id and role
-  async getUserByAccountId(accountId, role) {
+  async getUserByAccountId(account_id, role) {
     try {
       switch (role.toLowerCase()) {
         case 'student':
-          return await studentService.getStudentByAccountId(accountId);
+          return await studentService.getStudentByAccountId(account_id);
         case 'teacher':
-          return await teacherService.getTeacherByAccountId(accountId);
+          return await teacherService.getTeacherByAccountId(account_id);
         case 'admin':
-          return await adminService.getAdminByAccountId(accountId);
+          return await adminService.getAdminByAccountId(account_id);
         default:
           const error = new Error('Invalid role. Must be student, teacher, or admin');
           error.statusCode = 400;

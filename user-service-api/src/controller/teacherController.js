@@ -16,11 +16,11 @@ class TeacherController {
     }
   }
 
-  // GET /teachers/:id - Get teacher by ID
-  async getTeacherById(req, res, next) {
+  // GET /teachers/:account_id - Get teacher by account_id
+  async getTeacherByAccountId(req, res, next) {
     try {
-      const { id } = req.params;
-      const teacher = await teacherService.getTeacherById(id);
+      const { account_id } = req.params;
+      const teacher = await teacherService.getTeacherByAccountId(account_id);
       
       res.status(200).json({
         success: true,
@@ -32,13 +32,13 @@ class TeacherController {
     }
   }
 
-  // PUT /teachers/:id - Update teacher
+  // PATCH /teachers/:account_id - Update teacher
   async updateTeacher(req, res, next) {
     try {
-      const { id } = req.params;
+      const { account_id } = req.params;
       const updateData = req.body;
       
-      const teacher = await teacherService.updateTeacher(id, updateData);
+      const teacher = await teacherService.updateTeacherByAccountId(account_id, updateData);
       
       res.status(200).json({
         success: true,
@@ -50,11 +50,11 @@ class TeacherController {
     }
   }
 
-  // DELETE /teachers/:id - Delete teacher
+  // DELETE /teachers/:account_id - Delete teacher
   async deleteTeacher(req, res, next) {
     try {
-      const { id } = req.params;
-      await teacherService.deleteTeacher(id);
+      const { account_id } = req.params;
+      await teacherService.deleteTeacherByAccountId(account_id);
       
       res.status(200).json({
         success: true,

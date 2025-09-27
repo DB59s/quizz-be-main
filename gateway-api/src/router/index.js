@@ -1,6 +1,7 @@
 const express = require('express');
 const authRouter = require('./auth.router');
 const userRouter = require('./user.router');
+const adminRouter = require('./admin.router');
 
 const router = express.Router();
 
@@ -14,10 +15,11 @@ const router = express.Router();
 // Mount all routers
 router.use('/auth', authRouter);
 router.use('/users', userRouter);
+router.use('/admin', adminRouter);
 
 /**
  * @swagger
- * /api/health:
+ * /api/v1/health:
  *   get:
  *     summary: Health check endpoint
  *     tags: [General]
@@ -50,7 +52,7 @@ router.get('/health', (req, res) => {
 
 /**
  * @swagger
- * /api:
+ * /api/v1:
  *   get:
  *     summary: API welcome endpoint
  *     tags: [General]
@@ -67,7 +69,7 @@ router.get('/health', (req, res) => {
  *                   example: true
  *                 message:
  *                   type: string
- *                   example: "Welcome to Base Backend API"
+ *                   example: "Welcome to Gateway API v1"
  *                 version:
  *                   type: string
  *                   example: "1.0.0"
@@ -76,20 +78,27 @@ router.get('/health', (req, res) => {
  *                   properties:
  *                     health:
  *                       type: string
- *                       example: "/api/health"
+ *                       example: "/api/v1/health"
  *                     auth:
  *                       type: string
- *                       example: "/api/auth"
+ *                       example: "/api/v1/auth"
+ *                     users:
+ *                       type: string
+ *                       example: "/api/v1/users"
+ *                     admin:
+ *                       type: string
+ *                       example: "/api/v1/admin"
  */
 router.get('/', (req, res) => {
   res.status(200).json({
     success: true,
-    message: 'Welcome to Base Backend API',
+    message: 'Welcome to Gateway API v1',
     version: '1.0.0',
     endpoints: {
-      health: '/api/health',
-      auth: '/api/auth',
-      users: '/api/users',
+      health: '/api/v1/health',
+      auth: '/api/v1/auth',
+      users: '/api/v1/users',
+      admin: '/api/v1/admin',
       docs: '/api-docs'
     }
   });

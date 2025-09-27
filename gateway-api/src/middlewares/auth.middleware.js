@@ -44,8 +44,8 @@ function verifyToken(req, res, next) {
     
     // Attach user info to request
     req.user = {
-      accountId: decoded.accountId,
-      role: decoded.role
+      account_id: decoded?.account_id,
+      role: decoded?.role
     };
 
     next();

@@ -4,6 +4,34 @@ class StudentService {
   // Create a new student
   async createStudent(studentData) {
     try {
+      // Check if this is called from regular registration (has both full_name and student_code)
+      // or from Google OAuth (might have missing student_code)
+      const isRegularRegistration = studentData.full_name && studentData.student_code && studentData.student_code.trim() !== '';
+      
+      if (isRegularRegistration) {
+        // For regular registration: both full_name and student_code are required
+        if (!studentData.full_name || !studentData.student_code) {
+          const error = new Error('Full name and student code are required');
+          error.statusCode = 400;
+          throw error;
+        }
+
+        // Check if student_code already exists
+        const existingStudent = await Student.findOne({ student_code: studentData.student_code.toUpperCase() });
+        if (existingStudent) {
+          const error = new Error('Student code already exists');
+          error.statusCode = 400;
+          throw error;
+        }
+      } else {
+        // For Google OAuth: allow creation with minimal data
+        // User will complete profile later
+        if (!studentData.full_name) {
+          // Set a default name if not provided
+          studentData.full_name = studentData.email ? studentData.email.split('@')[0] : 'Google User';
+        }
+      }
+
       const student = new Student(studentData);
       return await student.save();
     } catch (error) {
@@ -69,9 +97,9 @@ class StudentService {
   }
 
   // Get student by account_id
-  async getStudentByAccountId(accountId) {
+  async getStudentByAccountId(account_id) {
     try {
-      const student = await Student.findOne({ account_id: accountId });
+      const student = await Student.findOne({ account_id: account_id });
       if (!student) {
         const error = new Error('Student not found');
         error.statusCode = 404;
@@ -83,11 +111,11 @@ class StudentService {
     }
   }
 
-  // Update student
-  async updateStudent(id, updateData) {
+  // Update student by account_id
+  async updateStudentByAccountId(account_id, updateData) {
     try {
-      const student = await Student.findByIdAndUpdate(
-        id,
+      const student = await Student.findOneAndUpdate(
+        { account_id: account_id },
         updateData,
         { new: true, runValidators: true }
       );
@@ -104,10 +132,10 @@ class StudentService {
     }
   }
 
-  // Delete student
-  async deleteStudent(id) {
+  // Delete student by account_id
+  async deleteStudentByAccountId(account_id) {
     try {
-      const student = await Student.findByIdAndDelete(id);
+      const student = await Student.findOneAndDelete({ account_id: account_id });
       if (!student) {
         const error = new Error('Student not found');
         error.statusCode = 404;

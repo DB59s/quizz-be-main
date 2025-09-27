@@ -16,12 +16,11 @@ class StudentController {
     }
   }
 
-  // GET /students/:id - Get student by ID
-  async getStudentById(req, res, next) {
+  // GET /students/:account_id - Get student by account_id
+  async getStudentByAccountId(req, res, next) {
     try {
-      const { id } = req.params;
-      console.log("id of student ", id) 
-      const student = await studentService.getStudentById(id);
+      const { account_id } = req.params;
+      const student = await studentService.getStudentByAccountId(account_id);
       
       res.status(200).json({
         success: true,
@@ -33,13 +32,13 @@ class StudentController {
     }
   }
 
-  // PUT /students/:id - Update student
+  // PATCH /students/:account_id - Update student
   async updateStudent(req, res, next) {
     try {
-      const { id } = req.params;
+      const { account_id } = req.params;
       const updateData = req.body;
       
-      const student = await studentService.updateStudent(id, updateData);
+      const student = await studentService.updateStudentByAccountId(account_id, updateData);
       
       res.status(200).json({
         success: true,
@@ -51,11 +50,11 @@ class StudentController {
     }
   }
 
-  // DELETE /students/:id - Delete student
+  // DELETE /students/:account_id - Delete student
   async deleteStudent(req, res, next) {
     try {
-      const { id } = req.params;
-      await studentService.deleteStudent(id);
+      const { account_id } = req.params;
+      await studentService.deleteStudentByAccountId(account_id);
       
       res.status(200).json({
         success: true,

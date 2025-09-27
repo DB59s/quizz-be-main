@@ -6,7 +6,7 @@ const {
   getRefreshTokenExpiration,
   isRefreshTokenExpired 
 } = require('../utils/jwt');
-const { googleAuthService } = require('../service');
+const { googleAuthService, emailService, otpService } = require('../service');
 const { callUserService } = require('../middlewares/gateway.middleware');
 const { google } = require('googleapis');
 const { 
@@ -31,6 +31,7 @@ const oauth2Client = new google.auth.OAuth2(
 // Get repositories
 const getAccountRepository = () => AppDataSource.getRepository('Account');
 const getRefreshTokenRepository = () => AppDataSource.getRepository('RefreshToken');
+const getPasswordResetRepository = () => AppDataSource.getRepository('PasswordReset');
 
 /**
  * Register a new account
@@ -40,7 +41,7 @@ async function register(req, res) {
   let savedAccount = null;
   
   try {
-    const { email, password, role = 'student' } = req.body;
+    const { email, password, full_name, student_code } = req.body;
 
     // Validate input
     if (!email || !password) {
@@ -48,6 +49,15 @@ async function register(req, res) {
         success: false,
         error: 'Validation failed',
         message: 'Email and password are required'
+      });
+    }
+
+    // Validate full_name and student_code (required for student registration)
+    if (!full_name || !student_code) {
+      return res.status(400).json({
+        success: false,
+        error: 'Validation failed',
+        message: 'Full name and student code are required'
       });
     }
 
@@ -70,15 +80,8 @@ async function register(req, res) {
       });
     }
 
-    // Validate role
-    const validRoles = ['student', 'teacher', 'admin'];
-    if (!validRoles.includes(role)) {
-      return res.status(400).json({
-        success: false,
-        error: 'Validation failed',
-        message: 'Invalid role specified'
-      });
-    }
+    // Only allow student registration through public register endpoint
+    const role = 'student';
 
     const accountRepo = getAccountRepository();
 
@@ -109,9 +112,11 @@ async function register(req, res) {
     // Create user in user service
     try {
       const userServiceResponse = await callUserService('POST', '/users', {
-        accountId: savedAccount.id,
+        account_id: savedAccount.id,
         email: savedAccount.email,
-        role: savedAccount.role
+        role: savedAccount.role,
+        full_name: full_name,
+        student_code: student_code
       });
 
       console.log(`User created in user service for account: ${savedAccount.id}`);
@@ -131,7 +136,7 @@ async function register(req, res) {
 
     // Generate tokens
     const accessToken = generateAccessToken({
-      accountId: savedAccount.id,
+      account_id: savedAccount.id,
       role: savedAccount.role
     });
 
@@ -244,7 +249,7 @@ async function login(req, res) {
 
     // Generate tokens
     const accessToken = generateAccessToken({
-      accountId: account.id,
+      account_id: account.id,
       role: account.role
     });
 
@@ -359,7 +364,7 @@ async function refresh(req, res) {
 
     // Generate new tokens
     const newAccessToken = generateAccessToken({
-      accountId: account.id,
+      account_id: account.id,
       role: account.role
     });
 
@@ -401,10 +406,10 @@ async function refresh(req, res) {
  */
 async function me(req, res) {
   try {
-    const { accountId } = req.user;
+    const { account_id } = req.user;
 
     const accountRepo = getAccountRepository();
-    const account = await accountRepo.findOne({ where: { id: accountId } });
+    const account = await accountRepo.findOne({ where: { id: account_id } });
 
     if (!account) {
       return res.status(404).json({
@@ -511,12 +516,16 @@ async function googleLogin(req, res) {
       account = await accountRepo.save(account);
       console.log(`New Google account created: ${googleUser.email} with ID: ${account.id}`);
 
-      // Create user in user service
+      // For Google login, we don't have full_name and student_code
+      // The user will need to complete their profile later
+      // We create a basic student record with empty required fields
       try {
         const userServiceResponse = await callUserService('POST', '/users', {
-          accountId: account.id,
+          account_id: account.id,
           email: account.email,
-          role: account.role
+          role: account.role,
+          full_name: googleUser.name || '',
+          student_code: '' // Will be set later by user
         });
 
         console.log(`User created in user service for Google account: ${account.id}`);
@@ -537,7 +546,7 @@ async function googleLogin(req, res) {
 
     // Generate tokens
     const accessToken = generateAccessToken({
-      accountId: account.id,
+      account_id: account.id,
       role: account.role
     });
 
@@ -689,12 +698,15 @@ async function googleCallback(req, res) {
       account = await accountRepo.save(account);
       console.log(`New Google account created via callback: ${googleUser.email} with ID: ${account.id}`);
 
-      // Create user in user service
+      // For Google login, we don't have full_name and student_code
+      // The user will need to complete their profile later
       try {
         const userServiceResponse = await callUserService('POST', '/users', {
-          accountId: account.id,
+          account_id: account.id,
           email: account.email,
-          role: account.role
+          role: account.role,
+          full_name: googleUser.name || '',
+          student_code: '' // Will be set later by user
         });
 
         console.log(`User created in user service for Google callback account: ${account.id}`);
@@ -715,7 +727,7 @@ async function googleCallback(req, res) {
 
     // Generate tokens
     const accessToken = generateAccessToken({
-      accountId: account.id,
+      account_id: account.id,
       role: account.role
     });
 
@@ -778,6 +790,274 @@ async function googleAuth(req, res) {
   }
 }
 
+/**
+ * Request password reset with OTP
+ * POST /auth/forgot-password
+ */
+async function forgotPassword(req, res) {
+  try {
+    const { email } = req.body;
+
+    const accountRepo = getAccountRepository();
+    const passwordResetRepo = getPasswordResetRepository();
+
+    // Clean expired OTP records before processing
+    await otpService.cleanExpiredOTPs(passwordResetRepo);
+
+    // Check if account exists (but don't reveal this information)
+    const account = await accountRepo.findOne({ where: { email } });
+    
+    // Always return the same response regardless of whether email exists
+    const response = {
+      success: true,
+      message: 'If an account with this email exists, an OTP has been sent to your email address. Please check your inbox.'
+    };
+
+    // If account exists and is active, proceed with OTP generation
+    if (account && account.status === 'active') {
+      // Check if account is a Google account without password
+      if (!account.password_hash && account.provider === 'google') {
+        // For Google accounts, we still send the standard response
+        // but don't actually send an OTP
+        console.log(`Forgot password request for Google account: ${email}`);
+        return res.status(200).json(response);
+      }
+
+      // Remove any existing unused OTP for this email
+      const existingResets = await passwordResetRepo.find({
+        where: { email, used: false }
+      });
+      
+      if (existingResets.length > 0) {
+        await passwordResetRepo.remove(existingResets);
+      }
+
+      // Generate OTP
+      const otp = otpService.generateOTP();
+      const otpHash = await otpService.hashOTP(otp);
+      const expiresAt = otpService.getOTPExpiration();
+
+      // Save OTP to database
+      const passwordReset = passwordResetRepo.create({
+        email,
+        otp_hash: otpHash,
+        expires_at: expiresAt,
+        used: false,
+        otp_verified: false
+      });
+
+      await passwordResetRepo.save(passwordReset);
+
+      // Send OTP via email
+      try {
+        await emailService.sendOTPEmail(email, otp);
+        console.log(`OTP sent successfully to ${email}`);
+      } catch (emailError) {
+        console.error(`Failed to send OTP email to ${email}:`, emailError);
+        // Remove the OTP record if email sending failed
+        await passwordResetRepo.remove(passwordReset);
+        
+        return res.status(500).json({
+          success: false,
+          error: 'Email service error',
+          message: 'Failed to send OTP email. Please try again later.'
+        });
+      }
+    } else {
+      // Account doesn't exist or is not active, but we still return success message
+      console.log(`Forgot password request for non-existent or inactive account: ${email}`);
+    }
+
+    // Return success response in all cases
+    res.status(200).json(response);
+
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      message: 'Failed to process forgot password request'
+    });
+  }
+}
+
+/**
+ * Verify OTP for password reset
+ * POST /auth/verify-otp
+ */
+async function verifyOTP(req, res) {
+  try {
+    const { email, otp } = req.body;
+
+    const passwordResetRepo = getPasswordResetRepository();
+
+    // Find the most recent unused OTP for this email
+    const passwordReset = await passwordResetRepo.findOne({
+      where: { email, used: false },
+      order: { created_at: 'DESC' }
+    });
+
+    if (!passwordReset) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid OTP',
+        message: 'No valid OTP found for this email address'
+      });
+    }
+
+    // Check if OTP is expired
+    if (otpService.isOTPExpired(passwordReset.expires_at)) {
+      // Remove expired OTP
+      await passwordResetRepo.remove(passwordReset);
+      
+      return res.status(400).json({
+        success: false,
+        error: 'OTP expired',
+        message: 'OTP has expired. Please request a new one.'
+      });
+    }
+
+    // Verify OTP
+    const isValidOTP = await otpService.verifyOTP(otp, passwordReset.otp_hash);
+    
+    if (!isValidOTP) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid OTP',
+        message: 'The OTP you entered is incorrect'
+      });
+    }
+
+    // Mark OTP as verified (but not used yet)
+    passwordReset.otp_verified = true;
+    await passwordResetRepo.save(passwordReset);
+
+    console.log(`OTP verified successfully for ${email}`);
+
+    res.status(200).json({
+      success: true,
+      message: 'OTP verified successfully. You can now reset your password.',
+      otp_verified: true
+    });
+
+  } catch (error) {
+    console.error('Verify OTP error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      message: 'Failed to verify OTP'
+    });
+  }
+}
+
+/**
+ * Reset password after OTP verification
+ * POST /auth/reset-password
+ */
+async function resetPassword(req, res) {
+  try {
+    const { email, newPassword } = req.body;
+
+    const accountRepo = getAccountRepository();
+    const passwordResetRepo = getPasswordResetRepository();
+
+    // Find verified but unused OTP for this email
+    const passwordReset = await passwordResetRepo.findOne({
+      where: { 
+        email, 
+        used: false, 
+        otp_verified: true 
+      },
+      order: { created_at: 'DESC' }
+    });
+
+    if (!passwordReset) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid request',
+        message: 'No verified OTP found. Please verify your OTP first.'
+      });
+    }
+
+    // Check if OTP is expired
+    if (otpService.isOTPExpired(passwordReset.expires_at)) {
+      // Remove expired OTP
+      await passwordResetRepo.remove(passwordReset);
+      
+      return res.status(400).json({
+        success: false,
+        error: 'OTP expired',
+        message: 'OTP has expired. Please request a new one.'
+      });
+    }
+
+    // Find account
+    const account = await accountRepo.findOne({ where: { email } });
+    
+    if (!account) {
+      // Remove the OTP record
+      await passwordResetRepo.remove(passwordReset);
+      
+      return res.status(404).json({
+        success: false,
+        error: 'Account not found',
+        message: 'Account does not exist'
+      });
+    }
+
+    // Check account status
+    if (account.status !== 'active') {
+      // Remove the OTP record
+      await passwordResetRepo.remove(passwordReset);
+      
+      return res.status(400).json({
+        success: false,
+        error: 'Account disabled',
+        message: 'Account is banned or deleted'
+      });
+    }
+
+    // Hash new password
+    const newPasswordHash = await hashPassword(newPassword);
+
+    // Update account password
+    account.password_hash = newPasswordHash;
+    // If this was a Google account without password, change provider to local
+    if (account.provider === 'google' && !account.password_hash) {
+      account.provider = 'local';
+    }
+    
+    await accountRepo.save(account);
+
+    // Mark OTP as used
+    passwordReset.used = true;
+    await passwordResetRepo.save(passwordReset);
+
+    console.log(`Password reset successfully for ${email}`);
+
+    // Send success notification email
+    try {
+      await emailService.sendPasswordResetSuccessEmail(email);
+    } catch (emailError) {
+      console.error(`Failed to send password reset success email to ${email}:`, emailError);
+      // Don't fail the request if notification email fails
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Password reset successfully. You can now log in with your new password.'
+    });
+
+  } catch (error) {
+    console.error('Reset password error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      message: 'Failed to reset password'
+    });
+  }
+}
+
 module.exports = {
   register,
   login,
@@ -786,4 +1066,7 @@ module.exports = {
   googleAuth,
   refresh,
   me,
+  forgotPassword,
+  verifyOTP,
+  resetPassword,
 }; 

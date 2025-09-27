@@ -83,8 +83,8 @@ function gatewayMiddleware(allowedRoles, serviceBaseUrlEnv) {
       // Prepare headers for forwarding
       const forwardHeaders = {
         ...req.headers,
-        'x-account-id': decoded.accountId.toString(),
-        'x-user-id': decoded.accountId.toString(),
+        'x-account-id': decoded.account_id.toString(),
+        'x-user-id': decoded.account_id.toString(),
         'x-user-role': userRole,
         // Add service API token for user service
         'authorization': `Bearer ${USER_SERVICE_API_TOKEN}`
@@ -199,7 +199,7 @@ async function callUserService(method, path, data = null, options = {}) {
     throw new Error('USER_SERVICE_BASEURL not configured');
   }
 
-  const url = `${userServiceUrl}/api/v1${path}`;
+  const url = `${userServiceUrl}${path}`;
   
   const config = {
     method: method.toLowerCase(),

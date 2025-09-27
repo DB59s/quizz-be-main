@@ -1,5 +1,6 @@
 const express = require('express');
 const { authGatewayMiddleware, requireRole } = require('../middlewares/gateway.middleware');
+const { verifyToken } = require('../middlewares/auth.middleware');
 
 const router = express.Router();
 
@@ -12,7 +13,7 @@ const router = express.Router();
 
 /**
  * @swagger
- * /api/users:
+ * /api/v1/users:
  *   get:
  *     summary: Get all users (Admin only)
  *     tags: [Users]
@@ -30,7 +31,7 @@ router.get('/', requireRole(['admin'])('USER_SERVICE_BASEURL'));
 
 /**
  * @swagger
- * /api/users/{accountId}/{role}:
+ * /api/v1/users/{role}/{account_id}:
  *   get:
  *     summary: Get user by account ID and role
  *     tags: [Users]
@@ -38,7 +39,7 @@ router.get('/', requireRole(['admin'])('USER_SERVICE_BASEURL'));
  *       - BearerAuth: []
  *     parameters:
  *       - in: path
- *         name: accountId
+ *         name: account_id
  *         required: true
  *         schema:
  *           type: string
@@ -58,19 +59,19 @@ router.get('/', requireRole(['admin'])('USER_SERVICE_BASEURL'));
  *       404:
  *         description: User not found
  */
-router.get('/:accountId/:role', authGatewayMiddleware('USER_SERVICE_BASEURL'));
+router.get('/:role/:account_id', authGatewayMiddleware('USER_SERVICE_BASEURL'));
 
 /**
  * @swagger
- * /api/users/{accountId}/{role}:
- *   put:
+ * /api/v1/users/{role}/{account_id}:
+ *   patch:
  *     summary: Update user by account ID and role
  *     tags: [Users]
  *     security:
  *       - BearerAuth: []
  *     parameters:
  *       - in: path
- *         name: accountId
+ *         name: account_id
  *         required: true
  *         schema:
  *           type: string
@@ -103,11 +104,11 @@ router.get('/:accountId/:role', authGatewayMiddleware('USER_SERVICE_BASEURL'));
  *       404:
  *         description: User not found
  */
-router.put('/:accountId/:role', authGatewayMiddleware('USER_SERVICE_BASEURL'));
+router.patch('/:role/:account_id', authGatewayMiddleware('USER_SERVICE_BASEURL'));
 
 /**
  * @swagger
- * /api/users/{accountId}/{role}:
+ * /api/v1/users/{role}/{account_id}:
  *   delete:
  *     summary: Delete user by account ID and role (Admin only)
  *     tags: [Users]
@@ -115,7 +116,7 @@ router.put('/:accountId/:role', authGatewayMiddleware('USER_SERVICE_BASEURL'));
  *       - BearerAuth: []
  *     parameters:
  *       - in: path
- *         name: accountId
+ *         name: account_id
  *         required: true
  *         schema:
  *           type: string
@@ -137,6 +138,108 @@ router.put('/:accountId/:role', authGatewayMiddleware('USER_SERVICE_BASEURL'));
  *       404:
  *         description: User not found
  */
-router.delete('/:accountId/:role', requireRole(['admin'])('USER_SERVICE_BASEURL'));
+router.delete('/:role/:account_id', requireRole(['admin'])('USER_SERVICE_BASEURL'));
+
+/**
+ * @swagger
+ * /api/v1/users/me:
+ *   get:
+ *     summary: Get current user profile from token
+ *     tags: [Users]
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: User profile retrieved successfully
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: User not found
+ */
+router.get('/me', verifyToken, async (req, res) => {
+  try {
+    const { account_id, role } = req.user;
+    
+    // Forward request to user service with account_id and role from token
+    const { callUserService } = require('../middlewares/gateway.middleware');
+    
+    const userResponse = await callUserService('GET', `/${role}/${account_id}`);
+    
+    res.status(200).json({
+      success: true,
+      message: 'User profile retrieved successfully',
+      data: userResponse.data.data
+    });
+  } catch (error) {
+    console.error('Get user profile error:', error);
+    res.status(error.statusCode || 500).json({
+      success: false,
+      error: error.message || 'Internal server error',
+      message: error.response?.message || 'Failed to get user profile'
+    });
+  }
+});
+
+/**
+ * @swagger
+ * /api/v1/users/me:
+ *   patch:
+ *     summary: Update current user profile from token
+ *     tags: [Users]
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               full_name:
+ *                 type: string
+ *               student_code:
+ *                 type: string
+ *               class_name:
+ *                 type: string
+ *               phone_number:
+ *                 type: string
+ *               department:
+ *                 type: string
+ *                 description: For teachers only
+ *               teacher_code:
+ *                 type: string
+ *                 description: For teachers only
+ *     responses:
+ *       200:
+ *         description: User profile updated successfully
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: User not found
+ */
+router.patch('/me', verifyToken, async (req, res) => {
+  try {
+    const { account_id, role } = req.user;
+    const updateData = req.body;
+    
+    // Forward request to user service with account_id and role from token
+    const { callUserService } = require('../middlewares/gateway.middleware');
+    
+    const userResponse = await callUserService('PATCH', `/${role}/${account_id}`, updateData);
+    
+    res.status(200).json({
+      success: true,
+      message: 'User profile updated successfully',
+      data: userResponse.data.data
+    });
+  } catch (error) {
+    console.error('Update user profile error:', error);
+    res.status(error.statusCode || 500).json({
+      success: false,
+      error: error.message || 'Internal server error',
+      message: error.response?.message || 'Failed to update user profile'
+    });
+  }
+});
 
 module.exports = router; 

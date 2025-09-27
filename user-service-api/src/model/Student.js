@@ -23,9 +23,17 @@ const studentSchema = new mongoose.Schema({
   student_code: {
     type: String,
     unique: true,
-    sparse: true, // Allow null/undefined values
+    sparse: true, // Allow multiple null/empty values
     trim: true,
-    uppercase: true
+    uppercase: true,
+    validate: {
+      validator: function(v) {
+        // Allow empty string for Google OAuth users (they will complete profile later)
+        // But if provided, it must be at least 1 character
+        return !v || v.length > 0;
+      },
+      message: 'Student code must be at least 1 character if provided'
+    }
   },
   class_name: {
     type: String,

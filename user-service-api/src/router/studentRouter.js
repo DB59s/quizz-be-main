@@ -5,8 +5,8 @@ const router = express.Router();
 
 // Student routes
 router.get('/', studentController.getStudents);
-router.get('/:id', studentController.getStudentById);
-router.put('/:id', studentController.updateStudent);
-router.delete('/:id', studentController.deleteStudent);
+router.get('/:account_id', studentController.getStudentByAccountId);
+router.patch('/:account_id', studentController.updateStudent);
+router.delete('/:account_id', studentController.deleteStudent);
 
 module.exports = router; 
