@@ -23,13 +23,17 @@ const studentSchema = new mongoose.Schema({
   student_code: {
     type: String,
     unique: true,
-    sparse: true, // Allow multiple null/empty values
+    sparse: true, // Allow multiple null/undefined values
     trim: true,
     uppercase: true,
     validate: {
       validator: function(v) {
-        // Allow empty string for Google OAuth users (they will complete profile later)
-        // But if provided, it must be at least 1 character
+        // If it's empty string, convert to null for sparse index
+        if (v === '') {
+          this.student_code = null;
+          return true;
+        }
+        // If provided, it must be at least 1 character
         return !v || v.length > 0;
       },
       message: 'Student code must be at least 1 character if provided'
@@ -62,7 +66,7 @@ const studentSchema = new mongoose.Schema({
 // Indexes for search optimization
 studentSchema.index({ full_name: 'text', student_code: 'text', class_name: 'text' });
 studentSchema.index({ account_id: 1 });
-studentSchema.index({ student_code: 1 });
+studentSchema.index({ student_code: 1 }, { sparse: true }); // Sparse index to allow multiple null values
 studentSchema.index({ email: 1 });
 
 // Pre-save hook to check if profile is completed

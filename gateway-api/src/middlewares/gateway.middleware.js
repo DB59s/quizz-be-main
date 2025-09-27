@@ -185,6 +185,86 @@ function requireRole(roles) {
 }
 
 /**
+ * Simple role-based authentication middleware (no service forwarding)
+ * @param {string|string[]} allowedRoles - Single role or array of allowed roles
+ * @returns {Function} - Express middleware function
+ */
+function requireRoleOnly(allowedRoles) {
+  return async (req, res, next) => {
+    try {
+      // Step 1: Extract and verify JWT token
+      const authHeader = req.headers.authorization;
+      
+      if (!authHeader) {
+        return res.status(401).json({
+          success: false,
+          error: 'Unauthorized',
+          message: 'No token provided'
+        });
+      }
+
+      if (!authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({
+          success: false,
+          error: 'Unauthorized',
+          message: 'Invalid token format'
+        });
+      }
+
+      const token = authHeader.substring(7);
+      
+      if (!token) {
+        return res.status(401).json({
+          success: false,
+          error: 'Unauthorized',
+          message: 'No token provided'
+        });
+      }
+
+      // Verify JWT token
+      let decoded;
+      try {
+        decoded = verifyAccessToken(token);
+      } catch (error) {
+        return res.status(401).json({
+          success: false,
+          error: 'Unauthorized',
+          message: error.message === 'Token expired' ? 'Token expired' : 'Invalid token'
+        });
+      }
+
+      // Step 2: Check role authorization
+      const userRole = decoded.role;
+      const rolesArray = Array.isArray(allowedRoles) ? allowedRoles : [allowedRoles];
+      
+      if (!rolesArray.includes(userRole)) {
+        return res.status(403).json({
+          success: false,
+          error: 'Forbidden',
+          message: 'Insufficient permissions'
+        });
+      }
+
+      // Add user info to request
+      req.user = {
+        account_id: decoded.account_id,
+        role: decoded.role
+      };
+
+      next();
+      
+    } catch (error) {
+      console.error('[Role Check] Unexpected error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Internal Server Error',
+        message: 'An unexpected error occurred'
+      });
+    }
+  };
+}
+
+/**
  * Make a direct request to user service with proper authentication
  * @param {string} method - HTTP method (GET, POST, PUT, DELETE)
  * @param {string} path - Service endpoint path (e.g., '/users')
@@ -240,5 +320,6 @@ module.exports = {
   gatewayMiddleware,
   authGatewayMiddleware,
   requireRole,
+  requireRoleOnly,
   callUserService,
-}; 
+};  

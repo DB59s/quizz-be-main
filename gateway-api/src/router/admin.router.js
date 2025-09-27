@@ -1,5 +1,6 @@
 const express = require('express');
-const { requireRole } = require('../middlewares/gateway.middleware');
+const { requireRoleOnly } = require('../middlewares/gateway.middleware');
+const { createTeacher, createAdmin } = require('../controller/admin.controller');
 
 const router = express.Router();
 
@@ -14,7 +15,7 @@ const router = express.Router();
  * @swagger
  * /api/v1/admin/teachers:
  *   post:
- *     summary: Create teacher (Admin only)
+ *     summary: Create teacher account (Admin only)
  *     tags: [Admin]
  *     security:
  *       - BearerAuth: []
@@ -25,39 +26,66 @@ const router = express.Router();
  *           schema:
  *             type: object
  *             required:
- *               - account_id
+ *               - email
+ *               - password
  *               - full_name
  *               - department
  *             properties:
- *               account_id:
+ *               email:
  *                 type: string
- *                 description: Account ID from auth service
+ *                 format: email
+ *                 description: Teacher's email address
+ *               password:
+ *                 type: string
+ *                 minLength: 6
+ *                 description: Teacher's password
  *               full_name:
  *                 type: string
  *                 description: Teacher's full name
  *               department:
  *                 type: string
  *                 description: Department where teacher teaches
- *               email:
- *                 type: string
- *                 description: Teacher's email (optional)
  *     responses:
  *       201:
- *         description: Teacher created successfully
+ *         description: Teacher account created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 user:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     email:
+ *                       type: string
+ *                     role:
+ *                       type: string
+ *                     full_name:
+ *                       type: string
+ *                     department:
+ *                       type: string
  *       400:
- *         description: Bad request - Missing required fields
+ *         description: Bad request - Missing required fields or validation errors
  *       401:
  *         description: Unauthorized
  *       403:
  *         description: Forbidden - Admin access required
+ *       500:
+ *         description: Internal server error
  */
-router.post('/teachers', requireRole(['admin'])('USER_SERVICE_BASEURL'));
+router.post('/teachers', requireRoleOnly(['admin']), createTeacher);
 
 /**
  * @swagger
  * /api/v1/admin/admins:
  *   post:
- *     summary: Create admin (Admin only)
+ *     summary: Create admin account (Admin only)
  *     tags: [Admin]
  *     security:
  *       - BearerAuth: []
@@ -68,28 +96,53 @@ router.post('/teachers', requireRole(['admin'])('USER_SERVICE_BASEURL'));
  *           schema:
  *             type: object
  *             required:
- *               - account_id
+ *               - email
+ *               - password
  *               - full_name
  *             properties:
- *               account_id:
+ *               email:
  *                 type: string
- *                 description: Account ID from auth service
+ *                 format: email
+ *                 description: Admin's email address
+ *               password:
+ *                 type: string
+ *                 minLength: 6
+ *                 description: Admin's password
  *               full_name:
  *                 type: string
  *                 description: Admin's full name
- *               email:
- *                 type: string
- *                 description: Admin's email (optional)
  *     responses:
  *       201:
- *         description: Admin created successfully
+ *         description: Admin account created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 user:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     email:
+ *                       type: string
+ *                     role:
+ *                       type: string
+ *                     full_name:
+ *                       type: string
  *       400:
- *         description: Bad request - Missing required fields
+ *         description: Bad request - Missing required fields or validation errors
  *       401:
  *         description: Unauthorized
  *       403:
  *         description: Forbidden - Admin access required
+ *       500:
+ *         description: Internal server error
  */
-router.post('/admins', requireRole(['admin'])('USER_SERVICE_BASEURL'));
+router.post('/admins', requireRoleOnly(['admin']), createAdmin);
 
 module.exports = router;

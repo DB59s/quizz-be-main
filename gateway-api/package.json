@@ -6,7 +6,9 @@
   "scripts": {
     "start": "cross-env NODE_ENV=production node src/server.js",
     "dev": "cross-env NODE_ENV=development nodemon src/server.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "create-admin": "cross-env NODE_ENV=development node create-admin.js",
+    "test-connection": "cross-env NODE_ENV=development node test-connection.js"
   },
   "keywords": [
     "nodejs",

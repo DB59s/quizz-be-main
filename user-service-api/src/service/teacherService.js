@@ -43,7 +43,6 @@ class TeacherService {
       if (search) {
         filter.$or = [
           { full_name: { $regex: search, $options: 'i' } },
-          { teacher_code: { $regex: search, $options: 'i' } }
         ];
       }
 

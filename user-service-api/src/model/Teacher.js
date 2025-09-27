@@ -20,13 +20,6 @@ const teacherSchema = new mongoose.Schema({
     maxLength: [100, 'Full name cannot exceed 100 characters'],
     default: ''
   },
-  teacher_code: {
-    type: String,
-    unique: true,
-    sparse: true, // Allow null/undefined values
-    trim: true,
-    uppercase: true
-  },
   department: {
     type: String,
     trim: true,
@@ -52,14 +45,13 @@ const teacherSchema = new mongoose.Schema({
 });
 
 // Indexes for search optimization
-teacherSchema.index({ full_name: 'text', teacher_code: 'text', department: 'text' });
+teacherSchema.index({ full_name: 'text', department: 'text' });
 teacherSchema.index({ account_id: 1 });
-teacherSchema.index({ teacher_code: 1 });
 teacherSchema.index({ email: 1 });
 
 // Pre-save hook to check if profile is completed
 teacherSchema.pre('save', function(next) {
-  this.profile_completed = !!(this.full_name && this.teacher_code && this.department);
+  this.profile_completed = !!(this.full_name  && this.department);
   next();
 });
 

@@ -1,6 +1,26 @@
 const { Student } = require('../model/User');
 
 class StudentService {
+  // Generate unique student code for Google OAuth users
+  async generateStudentCode() {
+    const timestamp = Date.now().toString(36); // Convert timestamp to base36
+    const randomStr = Math.random().toString(36).substring(2, 6).toUpperCase(); // Random 4 chars
+    return `STU${timestamp}${randomStr}`.toUpperCase();
+  }
+
+  // Ensure student code is unique
+  async ensureUniqueStudentCode(baseCode) {
+    let studentCode = baseCode;
+    let counter = 1;
+    
+    while (await Student.findOne({ student_code: studentCode })) {
+      studentCode = `${baseCode}${counter}`;
+      counter++;
+    }
+    
+    return studentCode;
+  }
+
   // Create a new student
   async createStudent(studentData) {
     try {
@@ -23,13 +43,19 @@ class StudentService {
           error.statusCode = 400;
           throw error;
         }
+        
+        // Convert to uppercase for consistency
+        studentData.student_code = studentData.student_code.toUpperCase();
       } else {
-        // For Google OAuth: allow creation with minimal data
-        // User will complete profile later
+        // For Google OAuth: generate unique student code
         if (!studentData.full_name) {
           // Set a default name if not provided
           studentData.full_name = studentData.email ? studentData.email.split('@')[0] : 'Google User';
         }
+        
+        // Generate and ensure unique student code
+        const generatedCode = await this.generateStudentCode();
+        studentData.student_code = await this.ensureUniqueStudentCode(generatedCode);
       }
 
       const student = new Student(studentData);

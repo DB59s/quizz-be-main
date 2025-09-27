@@ -1,5 +1,5 @@
 const express = require('express');
-const { register, login, googleLogin, googleCallback, googleAuth, refresh, me, forgotPassword, verifyOTP, resetPassword } = require('../controller/auth.controller');
+const { register, login, googleLogin, googleCallback, googleAuth, refresh, me, logout, forgotPassword, verifyOTP, resetPassword } = require('../controller/auth.controller');
 const { verifyToken } = require('../middlewares/auth.middleware');
 const { 
   validateForgotPasswordRequest, 
@@ -162,7 +162,7 @@ router.post('/google', googleLogin);
 
 /**
  * @swagger
- * /api/auth/google/callback:
+ * /api/v1/auth/google/callback:
  *   get:
  *     summary: Google OAuth callback (server-side flow)
  *     tags: [Authentication]
@@ -281,6 +281,41 @@ router.post('/refresh', refresh);
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.get('/me', verifyToken, me);
+
+/**
+ * @swagger
+ * /api/v1/auth/logout:
+ *   post:
+ *     summary: Logout user by invalidating refresh token
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/LogoutRequest'
+ *     responses:
+ *       200:
+ *         description: Logout successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: 'Logout successful'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ */
+router.post('/logout', logout);
 
 /**
  * @swagger

@@ -19,7 +19,7 @@ const {
 
 // Initialize OAuth2 client for server-side flow
 const getCallbackUrl = () => {
-  return `${API_BASE_URL}/api/auth/google/callback`;
+  return `${API_BASE_URL}/api/v1/auth/google/callback`;
 };
 
 const oauth2Client = new google.auth.OAuth2(
@@ -518,14 +518,14 @@ async function googleLogin(req, res) {
 
       // For Google login, we don't have full_name and student_code
       // The user will need to complete their profile later
-      // We create a basic student record with empty required fields
+      // We create a basic student record with null student_code to avoid unique constraint issues
       try {
         const userServiceResponse = await callUserService('POST', '/users', {
           account_id: account.id,
           email: account.email,
           role: account.role,
           full_name: googleUser.name || '',
-          student_code: '' // Will be set later by user
+          student_code: null // Will be set later by user, null allows multiple Google users
         });
 
         console.log(`User created in user service for Google account: ${account.id}`);
@@ -706,7 +706,7 @@ async function googleCallback(req, res) {
           email: account.email,
           role: account.role,
           full_name: googleUser.name || '',
-          student_code: '' // Will be set later by user
+          student_code: null // Will be set later by user, null allows multiple Google users
         });
 
         console.log(`User created in user service for Google callback account: ${account.id}`);
@@ -1058,6 +1058,65 @@ async function resetPassword(req, res) {
   }
 }
 
+/**
+ * Logout user by invalidating refresh token
+ * POST /auth/logout
+ */
+async function logout(req, res) {
+  try {
+    const { refreshToken } = req.body;
+
+    // If no refresh token provided, still return success (user might have already cleared local storage)
+    if (!refreshToken) {
+      return res.status(200).json({
+        success: true,
+        message: 'Logout successful'
+      });
+    }
+
+    const refreshTokenRepo = getRefreshTokenRepository();
+
+    // Find all refresh tokens (we need to check against hashed versions)
+    const refreshTokens = await refreshTokenRepo.find();
+
+    let validRefreshToken = null;
+
+    // Check each token by comparing hash
+    for (const tokenRecord of refreshTokens) {
+      try {
+        const isValidToken = await compareToken(refreshToken, tokenRecord.token);
+        if (isValidToken) {
+          validRefreshToken = tokenRecord;
+          break;
+        }
+      } catch (error) {
+        // Continue checking other tokens if comparison fails
+        continue;
+      }
+    }
+
+    // If valid refresh token found, remove it
+    if (validRefreshToken) {
+      await refreshTokenRepo.remove(validRefreshToken);
+      console.log(`Refresh token invalidated for account: ${validRefreshToken.account_id}`);
+    }
+
+    // Always return success (even if token not found - user might have already logged out)
+    res.status(200).json({
+      success: true,
+      message: 'Logout successful'
+    });
+
+  } catch (error) {
+    console.error('Logout error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      message: 'Failed to logout'
+    });
+  }
+}
+
 module.exports = {
   register,
   login,
@@ -1066,6 +1125,7 @@ module.exports = {
   googleAuth,
   refresh,
   me,
+  logout,
   forgotPassword,
   verifyOTP,
   resetPassword,
