@@ -25,16 +25,22 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs, {
 }));
 
 // Mount API routes
-app.use('/api', apiRouter);
+app.use('/api/v1', apiRouter);
 
 // Root endpoint
 app.get('/', (req, res) => {
   res.status(200).json({
     success: true,
-    message: 'Base Backend Server',
+    message: 'Gateway API Server',
     version: '1.0.0',
     documentation: '/api-docs',
-    api: '/api'
+    api: '/api/v1',
+    endpoints: {
+      health: '/api/v1/health',
+      auth: '/api/v1/auth',
+      users: '/api/v1/users',
+      admin: '/api/v1/admin'
+    }
   });
 });
 

@@ -32,5 +32,20 @@ module.exports = {
   // URL configuration for OAuth callbacks
   API_BASE_URL: process.env.API_BASE_URL || 'http://localhost:8080',
   FRONTEND_URL: process.env.FRONTEND_URL || 'http://localhost:8080',
-  FRONTEND_PATH: process.env.FRONTEND_PATH || '/front-end/index.html'
+  FRONTEND_PATH: process.env.FRONTEND_PATH || '/front-end/index.html',
+
+  // Service URLs
+  USER_SERVICE_BASEURL: process.env.USER_SERVICE_BASEURL || 'http://localhost:3001',
+
+  // Service API Tokens
+  USER_SERVICE_API_TOKEN: process.env.USER_SERVICE_API_TOKEN || 'user_service_secret_token_2024',
+
+  // Email configuration
+  EMAIL_USER: process.env.EMAIL_USER || 'vuduy050903@gmail.com',
+  EMAIL_PASS: process.env.EMAIL_PASS || 'zfsfiyzrschweqgm',
+  EMAIL_HOST: process.env.EMAIL_HOST || 'smtp.gmail.com',
+  EMAIL_PORT: parseInt(process.env.EMAIL_PORT) || 587,
+  
+  // OTP configuration
+  OTP_EXPIRES_MINUTES: parseInt(process.env.OTP_EXPIRES_MINUTES) || 5
 };

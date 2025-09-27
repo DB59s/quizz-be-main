@@ -48,7 +48,7 @@ const options = {
             },
             role: {
               type: 'string',
-              enum: ['user', 'teacher', 'admin'],
+              enum: ['student', 'teacher', 'admin'],
               description: 'Account role'
             },
             status: {
@@ -80,23 +80,28 @@ const options = {
         },
         RegisterRequest: {
           type: 'object',
-          required: ['email', 'password'],
+          required: ['email', 'password', 'full_name', 'student_code'],
           properties: {
             email: {
               type: 'string',
               format: 'email',
-              example: 'user@example.com'
+              example: 'student@example.com'
             },
             password: {
               type: 'string',
               minLength: 6,
               example: 'password123'
             },
-            role: {
+            full_name: {
               type: 'string',
-              enum: ['user', 'teacher', 'admin'],
-              default: 'user',
-              example: 'user'
+              maxLength: 100,
+              example: 'Nguyen Van A',
+              description: 'Full name of the student'
+            },
+            student_code: {
+              type: 'string',
+              example: 'SV001234',
+              description: 'Unique student identification code'
             }
           }
         },
@@ -213,6 +218,175 @@ const options = {
             message: {
               type: 'string',
               example: 'Email and password are required'
+            }
+          }
+        },
+        LogoutRequest: {
+          type: 'object',
+          properties: {
+            refreshToken: {
+              type: 'string',
+              description: 'Refresh token to invalidate (optional)',
+              example: 'your_refresh_token_here'
+            }
+          }
+        },
+        Student: {
+          type: 'object',
+          properties: {
+            _id: {
+              type: 'string',
+              description: 'MongoDB ObjectId'
+            },
+            account_id: {
+              type: 'string',
+              description: 'Account ID from gateway service'
+            },
+            email: {
+              type: 'string',
+              format: 'email',
+              description: 'Student email address'
+            },
+            full_name: {
+              type: 'string',
+              maxLength: 100,
+              description: 'Full name of the student'
+            },
+            student_code: {
+              type: 'string',
+              description: 'Unique student identification code'
+            },
+            class_name: {
+              type: 'string',
+              description: 'Student class name'
+            },
+            phone_number: {
+              type: 'string',
+              description: 'Student phone number'
+            },
+            profile_completed: {
+              type: 'boolean',
+              description: 'Whether the student profile is completed'
+            },
+            created_at: {
+              type: 'string',
+              format: 'date-time',
+              description: 'Profile creation timestamp'
+            },
+            updated_at: {
+              type: 'string',
+              format: 'date-time',
+              description: 'Profile last update timestamp'
+            }
+          }
+        },
+        Teacher: {
+          type: 'object',
+          properties: {
+            _id: {
+              type: 'string',
+              description: 'MongoDB ObjectId'
+            },
+            account_id: {
+              type: 'string',
+              description: 'Account ID from gateway service'
+            },
+            email: {
+              type: 'string',
+              format: 'email',
+              description: 'Teacher email address'
+            },
+            full_name: {
+              type: 'string',
+              maxLength: 100,
+              description: 'Full name of the teacher'
+            },
+            teacher_code: {
+              type: 'string',
+              description: 'Unique teacher identification code'
+            },
+            department: {
+              type: 'string',
+              description: 'Teacher department'
+            },
+            phone_number: {
+              type: 'string',
+              description: 'Teacher phone number'
+            },
+            profile_completed: {
+              type: 'boolean',
+              description: 'Whether the teacher profile is completed'
+            },
+            created_at: {
+              type: 'string',
+              format: 'date-time',
+              description: 'Profile creation timestamp'
+            },
+            updated_at: {
+              type: 'string',
+              format: 'date-time',
+              description: 'Profile last update timestamp'
+            }
+          }
+        },
+        Admin: {
+          type: 'object',
+          properties: {
+            _id: {
+              type: 'string',
+              description: 'MongoDB ObjectId'
+            },
+            account_id: {
+              type: 'string',
+              description: 'Account ID from gateway service'
+            },
+            email: {
+              type: 'string',
+              format: 'email',
+              description: 'Admin email address'
+            },
+            full_name: {
+              type: 'string',
+              maxLength: 100,
+              description: 'Full name of the admin'
+            },
+            phone_number: {
+              type: 'string',
+              description: 'Admin phone number'
+            },
+            profile_completed: {
+              type: 'boolean',
+              description: 'Whether the admin profile is completed'
+            },
+            created_at: {
+              type: 'string',
+              format: 'date-time',
+              description: 'Profile creation timestamp'
+            },
+            updated_at: {
+              type: 'string',
+              format: 'date-time',
+              description: 'Profile last update timestamp'
+            }
+          }
+        },
+        UserServiceResponse: {
+          type: 'object',
+          properties: {
+            success: {
+              type: 'boolean',
+              example: true
+            },
+            message: {
+              type: 'string',
+              example: 'User created successfully'
+            },
+            data: {
+              oneOf: [
+                { $ref: '#/components/schemas/Student' },
+                { $ref: '#/components/schemas/Teacher' },
+                { $ref: '#/components/schemas/Admin' }
+              ]
             }
           }
         }
