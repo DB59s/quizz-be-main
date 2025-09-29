@@ -1,8 +1,8 @@
 -- Create the database if it doesn't exist
 CREATE DATABASE IF NOT EXISTS gateway_db;
 
--- Create user if it doesn't exist
-CREATE USER IF NOT EXISTS 'gateway_user'@'%' IDENTIFIED BY 'gateway_password';
+-- Create user if it doesn't exist (using mysql_native_password for compatibility)
+CREATE USER IF NOT EXISTS 'gateway_user'@'%' IDENTIFIED WITH mysql_native_password BY 'gateway_password';
 
 -- Grant all privileges on the gateway_db database to the user
 GRANT ALL PRIVILEGES ON gateway_db.* TO 'gateway_user'@'%';
