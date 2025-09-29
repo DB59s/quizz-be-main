@@ -24,6 +24,15 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs, {
   customSiteTitle: 'Auth Service API Documentation'
 }));
 
+// Health check endpoint (for Docker)
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'Gateway API is healthy',
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Mount API routes
 app.use('/api/v1', apiRouter);
 
