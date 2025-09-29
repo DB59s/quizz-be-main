@@ -10,7 +10,7 @@ services:
       MYSQL_USER: gateway_user
       MYSQL_PASSWORD: gateway_password
     ports:
-      - "9000:3306"
+      - "3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
       - ./mysql-init:/docker-entrypoint-initdb.d
@@ -33,7 +33,7 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
-      PORT: 3000
+      PORT: 9008
       # Database configuration for MySQL
       DB_TYPE: mysql
       DB_HOST: mysql
@@ -41,14 +41,14 @@ services:
       DB_USERNAME: gateway_user
       DB_PASSWORD: gateway_password
       DB_DATABASE: gateway_db
-      DB_SYNCHRONIZE: true
-      DB_LOGGING: false
+      DB_SYNCHRONIZE: "true"
+      DB_LOGGING: "false"
       # JWT configuration
       JWT_SECRET: your-super-secret-jwt-key-change-this-in-production
       JWT_EXPIRES_IN: 15m
       REFRESH_TOKEN_EXPIRES_DAYS: 7
       # API Gateway configuration
-      USER_SERVICE_BASEURL: http://user-service-api:3000
+      USER_SERVICE_BASEURL: http://service.vuquangduy.io.vn:9009
       USER_SERVICE_API_TOKEN: user_service_secret_token_2024
       # Production URL configuration
       API_BASE_URL: https://api.vuquangduy.io.vn
@@ -56,14 +56,14 @@ services:
       # Production domain for Swagger
       PRODUCTION_DOMAIN: api.vuquangduy.io.vn
     ports:
-      - "9008:3000"
+      - "9008:9008"
     depends_on:
       mysql:
         condition: service_healthy
     networks:
       - quiz_network
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/", "||", "exit", "1"]
+      test: ["CMD", "curl", "-f", "http://localhost:9008/"]
       timeout: 10s
       retries: 5
       start_period: 30s
@@ -77,19 +77,19 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
-      PORT: 3000
+      PORT: 9009
       # MongoDB Atlas configuration
       MONGO_URI: mongodb+srv://vuduy050903_db_user:3qHHYv2yylxfhHyg@cluster0.icn9gah.mongodb.net/user_service?retryWrites=true&w=majority&appName=Cluster0
       # API configuration
       API_PREFIX: /api/v1
       API_TOKEN: user_service_secret_token_2024
     ports:
-      - "9009:3000"
+      - "9009:9009"
     # No longer depends on local MongoDB container
     networks:
       - quiz_network
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/", "||", "exit", "1"]
+      test: ["CMD", "curl", "-f", "http://localhost:9009/"]
       timeout: 10s
       retries: 5
       start_period: 30s
