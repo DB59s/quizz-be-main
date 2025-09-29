@@ -53,7 +53,7 @@ services:
       JWT_EXPIRES_IN: 15m
       REFRESH_TOKEN_EXPIRES_DAYS: 7
       # API Gateway configuration
-      USER_SERVICE_BASEURL: https://vuquangduy.online
+      USER_SERVICE_BASEURL: https://vuquangduy.online/api/v1
       USER_SERVICE_API_TOKEN: user_service_secret_token_2024
       # Production URL configuration
       API_BASE_URL: https://vuquangduy.io.vn
