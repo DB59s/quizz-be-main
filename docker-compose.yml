@@ -33,6 +33,9 @@ services:
       dockerfile: Dockerfile
     container_name: quiz_gateway_api
     restart: unless-stopped
+    depends_on:
+      quiz_mysql:
+        condition: service_healthy
     environment:
       NODE_ENV: production
       PORT: 9008
