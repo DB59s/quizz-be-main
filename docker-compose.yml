@@ -36,7 +36,7 @@ services:
       PORT: 9008
       # Database configuration for MySQL
       DB_TYPE: mysql
-      DB_HOST: localhost
+      DB_HOST: mysql
       DB_PORT: 3306
       DB_USERNAME: gateway_user
       DB_PASSWORD: gateway_password
@@ -62,12 +62,13 @@ services:
         condition: service_healthy
     networks:
       - quiz_network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9008/"]
-      timeout: 30s
-      retries: 10
-      start_period: 60s
-      interval: 15s
+    # Temporarily disable healthcheck for debugging
+    # healthcheck:
+    #   test: ["CMD", "curl", "-f", "http://localhost:9008/"]
+    #   timeout: 30s
+    #   retries: 10
+    #   start_period: 60s
+    #   interval: 15s
 
   # User Service API
   user-service-api:
