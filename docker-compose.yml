@@ -1,6 +1,6 @@
 services:
   # MySQL Database for Gateway API
-  mysql:
+  quiz_mysql:
     image: mysql:8.0
     container_name: quiz_mysql
     restart: unless-stopped
@@ -36,7 +36,7 @@ services:
       PORT: 9008
       # Database configuration for MySQL
       DB_TYPE: mysql
-      DB_HOST: mysql
+      DB_HOST: quiz_mysql
       DB_PORT: 3306
       DB_USERNAME: gateway_user
       DB_PASSWORD: gateway_password
