@@ -16,10 +16,6 @@ services:
       - ./mysql-init:/docker-entrypoint-initdb.d
     networks:
       - quiz_network
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      timeout: 20s
-      retries: 10
 
   # MongoDB Atlas is used instead of local container
   # No local MongoDB needed since we use cloud MongoDB Atlas
@@ -58,8 +54,7 @@ services:
     ports:
       - "9008:9008"
     depends_on:
-      mysql:
-        condition: service_healthy
+      - quiz_mysql
     networks:
       - quiz_network
     # Temporarily disable healthcheck for debugging
@@ -90,12 +85,6 @@ services:
     # No longer depends on local MongoDB container
     networks:
       - quiz_network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9009/"]
-      timeout: 30s
-      retries: 10
-      start_period: 60s
-      interval: 15s
 
 # Named volumes for data persistence
 volumes:
