@@ -31,7 +31,10 @@ RUN echo 'NODE_ENV=production' > .env.production && \
     echo 'USER_SERVICE_API_TOKEN=user_service_secret_token_2024' >> .env.production && \
     echo 'JWT_SECRET=your-super-secret-jwt-key-change-this-in-production' >> .env.production && \
     echo 'JWT_EXPIRES_IN=15m' >> .env.production && \
-    echo 'REFRESH_TOKEN_EXPIRES_DAYS=7' >> .env.production
+    echo 'REFRESH_TOKEN_EXPIRES_DAYS=7' >> .env.production && \
+    echo 'API_BASE_URL=https://api.vuquangduy.io.vn' >> .env.production && \
+    echo 'FRONTEND_URL=https://api.vuquangduy.io.vn' >> .env.production && \
+    echo 'PRODUCTION_DOMAIN=api.vuquangduy.io.vn' >> .env.production
 
 # Create a non-root user for security
 RUN addgroup -g 1001 -S nodejs
@@ -49,4 +52,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD node -e "require('http').get('http://localhost:3000/', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"
 
 # Start the application
-CMD ["npm", "run", "start"]
+CMD ["node", "src/server.js"]

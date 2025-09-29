@@ -19,9 +19,9 @@ COPY . .
 # Create production environment file
 RUN echo 'NODE_ENV=production' > .env && \
     echo 'PORT=3000' >> .env && \
-    echo 'MONGO_URI=mongodb://admin:adminpassword@mongodb:27017/user_service?authSource=admin' >> .env && \
+    echo 'MONGO_URI=mongodb+srv://vuduy050903_db_user:3qHHYv2yylxfhHyg@cluster0.icn9gah.mongodb.net/user_service?retryWrites=true&w=majority&appName=Cluster0' >> .env && \
     echo 'API_PREFIX=/api/v1' >> .env && \
-    echo 'API_TOKEN=45f65we46f5ew465few465we46fwe46f4ew65f46w5e4f65we4f65ew46few465f' >> .env
+    echo 'API_TOKEN=user_service_secret_token_2024' >> .env
 
 # Create a non-root user for security
 RUN addgroup -g 1001 -S nodejs
@@ -39,4 +39,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD node -e "require('http').get('http://localhost:3000/', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"
 
 # Start the application
-CMD ["npm", "run", "start"]
+CMD ["node", "src/server.js"]
