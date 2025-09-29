@@ -10,7 +10,7 @@ services:
       MYSQL_USER: gateway_user
       MYSQL_PASSWORD: gateway_password
     ports:
-      - "3307:3306"
+      - "9000:3306"
     volumes:
       - mysql_data:/var/lib/mysql
       - ./mysql-init:/docker-entrypoint-initdb.d
@@ -21,26 +21,8 @@ services:
       timeout: 20s
       retries: 10
 
-  # MongoDB for User Service API
-  mongodb:
-    image: mongo:6.0
-    container_name: quiz_mongodb
-    restart: unless-stopped
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: admin
-      MONGO_INITDB_ROOT_PASSWORD: adminpassword
-      MONGO_INITDB_DATABASE: user_service
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongo_data:/data/db
-      - ./mongo-init:/docker-entrypoint-initdb.d
-    networks:
-      - quiz_network
-    healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
-      timeout: 20s
-      retries: 10
+  # MongoDB Atlas is used instead of local container
+  # No local MongoDB needed since we use cloud MongoDB Atlas
 
   # Gateway API Service
   gateway-api:
@@ -68,11 +50,13 @@ services:
       # API Gateway configuration
       USER_SERVICE_BASEURL: http://user-service-api:3000
       USER_SERVICE_API_TOKEN: user_service_secret_token_2024
-      # Frontend URL configuration
-      API_BASE_URL: http://localhost:8080
-      FRONTEND_URL: http://localhost:8080
+      # Production URL configuration
+      API_BASE_URL: https://api.vuquangduy.io.vn
+      FRONTEND_URL: https://api.vuquangduy.io.vn
+      # Production domain for Swagger
+      PRODUCTION_DOMAIN: api.vuquangduy.io.vn
     ports:
-      - "8080:3000"
+      - "9008:3000"
     depends_on:
       mysql:
         condition: service_healthy
@@ -94,16 +78,14 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3000
-      # MongoDB configuration
-      MONGO_URI: mongodb://admin:adminpassword@mongodb:27017/user_service?authSource=admin
+      # MongoDB Atlas configuration
+      MONGO_URI: mongodb+srv://vuduy050903_db_user:3qHHYv2yylxfhHyg@cluster0.icn9gah.mongodb.net/user_service?retryWrites=true&w=majority&appName=Cluster0
       # API configuration
       API_PREFIX: /api/v1
       API_TOKEN: user_service_secret_token_2024
     ports:
-      - "3001:3000"
-    depends_on:
-      mongodb:
-        condition: service_healthy
+      - "9009:3000"
+    # No longer depends on local MongoDB container
     networks:
       - quiz_network
     healthcheck:
@@ -116,8 +98,7 @@ services:
 volumes:
   mysql_data:
     driver: local
-  mongo_data:
-    driver: local
+  # mongo_data removed since we use MongoDB Atlas
 
 # Networks
 networks:
@@ -125,4 +106,4 @@ networks:
     driver: bridge
     ipam:
       config:
-        - subnet: 172.20.0.0/16
+        - subnet: 172.21.0.0/16
