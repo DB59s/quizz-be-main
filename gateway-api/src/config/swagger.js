@@ -15,11 +15,11 @@ const options = {
     },
     servers: [
       {
-        url: 'http://localhost:9008',
+        url: 'http://localhost:9006',
         description: 'Development server'
       },
       {
-        url: 'https://api.vuquangduy.io.vn',
+        url: 'https://vuquangduy.io.vn',
         description: 'Production server'
       }
     ],

@@ -18,7 +18,7 @@ COPY . .
 
 # Create production environment file
 RUN echo 'NODE_ENV=production' > .env.production && \
-    echo 'PORT=9008' >> .env.production && \
+    echo 'PORT=9006' >> .env.production && \
     echo 'DB_TYPE=mysql' >> .env.production && \
     echo 'DB_HOST=mysql' >> .env.production && \
     echo 'DB_PORT=3306' >> .env.production && \
@@ -27,14 +27,14 @@ RUN echo 'NODE_ENV=production' > .env.production && \
     echo 'DB_DATABASE=gateway_db' >> .env.production && \
     echo 'DB_SYNCHRONIZE=true' >> .env.production && \
     echo 'DB_LOGGING=false' >> .env.production && \
-    echo 'USER_SERVICE_BASEURL=https://userservice.vuquangduy.io.vn' >> .env.production && \
+    echo 'USER_SERVICE_BASEURL=https://vuquangduy.online' >> .env.production && \
     echo 'USER_SERVICE_API_TOKEN=user_service_secret_token_2024' >> .env.production && \
     echo 'JWT_SECRET=your-super-secret-jwt-key-change-this-in-production' >> .env.production && \
     echo 'JWT_EXPIRES_IN=15m' >> .env.production && \
     echo 'REFRESH_TOKEN_EXPIRES_DAYS=7' >> .env.production && \
-    echo 'API_BASE_URL=https://api.vuquangduy.io.vn' >> .env.production && \
-    echo 'FRONTEND_URL=https://api.vuquangduy.io.vn' >> .env.production && \
-    echo 'PRODUCTION_DOMAIN=api.vuquangduy.io.vn' >> .env.production
+    echo 'API_BASE_URL=https://vuquangduy.io.vn' >> .env.production && \
+    echo 'FRONTEND_URL=https://vuquangduy.io.vn' >> .env.production && \
+    echo 'PRODUCTION_DOMAIN=vuquangduy.io.vn' >> .env.production
 
 # Create a non-root user for security
 RUN addgroup -g 1001 -S nodejs
@@ -45,7 +45,7 @@ RUN chown -R nodeuser:nodejs /app
 USER nodeuser
 
 # Expose the port the app runs on
-EXPOSE 9008
+EXPOSE 9006
 
 # Start the application
 CMD ["node", "src/server.js"]

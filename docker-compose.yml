@@ -38,7 +38,7 @@ services:
         condition: service_healthy
     environment:
       NODE_ENV: production
-      PORT: 9008
+      PORT: 9006
       # Database configuration for MySQL
       DB_TYPE: mysql
       DB_HOST: quiz_mysql
@@ -53,19 +53,19 @@ services:
       JWT_EXPIRES_IN: 15m
       REFRESH_TOKEN_EXPIRES_DAYS: 7
       # API Gateway configuration
-      USER_SERVICE_BASEURL: http://service.vuquangduy.io.vn:9009
+      USER_SERVICE_BASEURL: https://vuquangduy.online
       USER_SERVICE_API_TOKEN: user_service_secret_token_2024
       # Production URL configuration
-      API_BASE_URL: https://api.vuquangduy.io.vn
-      FRONTEND_URL: https://api.vuquangduy.io.vn
+      API_BASE_URL: https://vuquangduy.io.vn
+      FRONTEND_URL: https://vuquangduy.io.vn
       # Production domain for Swagger
-      PRODUCTION_DOMAIN: api.vuquangduy.io.vn
+      PRODUCTION_DOMAIN: vuquangduy.io.vn
     ports:
-      - "9008:9008"
+      - "9006:9006"
     networks:
       - quiz_network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9008/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:9006/health"]
       timeout: 10s
       retries: 5
       start_period: 30s
@@ -80,14 +80,14 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
-      PORT: 9009
+      PORT: 9005
       # MongoDB Atlas configuration
       MONGO_URI: mongodb+srv://vuduy050903_db_user:3qHHYv2yylxfhHyg@cluster0.icn9gah.mongodb.net/user_service?retryWrites=true&w=majority&appName=Cluster0
       # API configuration
       API_PREFIX: /api/v1
       API_TOKEN: user_service_secret_token_2024
     ports:
-      - "9009:9009"
+      - "9005:9005"
     # No longer depends on local MongoDB container
     networks:
       - quiz_network

@@ -18,7 +18,7 @@ COPY . .
 
 # Create production environment file
 RUN echo 'NODE_ENV=production' > .env && \
-    echo 'PORT=9009' >> .env && \
+    echo 'PORT=9005' >> .env && \
     echo 'MONGO_URI=mongodb+srv://vuduy050903_db_user:3qHHYv2yylxfhHyg@cluster0.icn9gah.mongodb.net/user_service?retryWrites=true&w=majority&appName=Cluster0' >> .env && \
     echo 'API_PREFIX=/api/v1' >> .env && \
     echo 'API_TOKEN=user_service_secret_token_2024' >> .env
@@ -32,11 +32,11 @@ RUN chown -R nodeuser:nodejs /app
 USER nodeuser
 
 # Expose the port the app runs on
-EXPOSE 9009
+EXPOSE 9005
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:9009/', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"
+  CMD node -e "require('http').get('http://localhost:9005/', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"
 
 # Start the application
 CMD ["node", "src/server.js"]
