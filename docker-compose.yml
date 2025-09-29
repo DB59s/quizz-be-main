@@ -91,6 +91,42 @@ services:
     # No longer depends on local MongoDB container
     networks:
       - quiz_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9005/api/v1/health"]
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+      interval: 30s
+
+  # Admin Setup - Create admin account after all services are ready
+  admin-setup:
+    build:
+      context: ./gateway-api
+      dockerfile: Dockerfile
+    container_name: quiz_admin_setup
+    restart: "no"
+    depends_on:
+      gateway-api:
+        condition: service_healthy
+      user-service-api:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      # Database configuration for MySQL
+      DB_TYPE: mysql
+      DB_HOST: quiz_mysql
+      DB_PORT: 3306
+      DB_USERNAME: gateway_user
+      DB_PASSWORD: gateway_password
+      DB_DATABASE: gateway_db
+      DB_SYNCHRONIZE: "false"
+      DB_LOGGING: "false"
+      # API Gateway configuration
+      USER_SERVICE_BASEURL: http://quiz_user_service_api:9005
+      USER_SERVICE_API_TOKEN: user_service_secret_token_2024
+    networks:
+      - quiz_network
+    command: ["node", "create-admin.js"]
 
 # Named volumes for data persistence
 volumes:
