@@ -10,7 +10,7 @@ services:
       MYSQL_USER: gateway_user
       MYSQL_PASSWORD: gateway_password
     ports:
-      - "3306:3306"
+      - "3307:3306"
     volumes:
       - mysql_data:/var/lib/mysql
       - ./mysql-init:/docker-entrypoint-initdb.d
@@ -62,11 +62,7 @@ services:
         condition: service_healthy
     networks:
       - quiz_network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9008/"]
-      timeout: 10s
-      retries: 5
-      start_period: 30s
+   
 
   # User Service API
   user-service-api:
@@ -90,9 +86,10 @@ services:
       - quiz_network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9009/"]
-      timeout: 10s
-      retries: 5
-      start_period: 30s
+      timeout: 30s
+      retries: 10
+      start_period: 60s
+      interval: 15s
 
 # Named volumes for data persistence
 volumes:
