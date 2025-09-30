@@ -1,6 +1,6 @@
 services:
   # MySQL Database for Gateway API
-  mysql:
+  quiz_mysql:
     image: mysql:8.0
     container_name: quiz_mysql
     restart: unless-stopped
@@ -10,16 +10,18 @@ services:
       MYSQL_USER: gateway_user
       MYSQL_PASSWORD: gateway_password
     ports:
-      - "3306:3306"
+      - "3307:3306"
     volumes:
       - mysql_data:/var/lib/mysql
       - ./mysql-init:/docker-entrypoint-initdb.d
     networks:
       - quiz_network
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      timeout: 20s
-      retries: 10
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -prootpassword --silent || exit 1"]
+      timeout: 5s
+      retries: 20
+      interval: 3s
+      start_period: 45s
 
   # MongoDB Atlas is used instead of local container
   # No local MongoDB needed since we use cloud MongoDB Atlas
@@ -31,12 +33,15 @@ services:
       dockerfile: Dockerfile
     container_name: quiz_gateway_api
     restart: unless-stopped
+    depends_on:
+      quiz_mysql:
+        condition: service_healthy
     environment:
       NODE_ENV: production
-      PORT: 9008
+      PORT: 9006
       # Database configuration for MySQL
       DB_TYPE: mysql
-      DB_HOST: mysql
+      DB_HOST: quiz_mysql
       DB_PORT: 3306
       DB_USERNAME: gateway_user
       DB_PASSWORD: gateway_password
@@ -48,25 +53,23 @@ services:
       JWT_EXPIRES_IN: 15m
       REFRESH_TOKEN_EXPIRES_DAYS: 7
       # API Gateway configuration
-      USER_SERVICE_BASEURL: http://service.vuquangduy.io.vn:9009
+      USER_SERVICE_BASEURL: https://vuquangduy.online/api/v1
       USER_SERVICE_API_TOKEN: user_service_secret_token_2024
       # Production URL configuration
-      API_BASE_URL: https://api.vuquangduy.io.vn
-      FRONTEND_URL: https://api.vuquangduy.io.vn
+      API_BASE_URL: https://vuquangduy.io.vn
+      FRONTEND_URL: https://vuquangduy.io.vn
       # Production domain for Swagger
-      PRODUCTION_DOMAIN: api.vuquangduy.io.vn
+      PRODUCTION_DOMAIN: vuquangduy.io.vn
     ports:
-      - "9008:9008"
-    depends_on:
-      mysql:
-        condition: service_healthy
+      - "9006:9006"
     networks:
       - quiz_network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9008/"]
+      test: ["CMD", "curl", "-f", "http://localhost:9006/health"]
       timeout: 10s
       retries: 5
       start_period: 30s
+      interval: 30s
 
   # User Service API
   user-service-api:
@@ -77,22 +80,53 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
-      PORT: 9009
+      PORT: 9005
       # MongoDB Atlas configuration
       MONGO_URI: mongodb+srv://vuduy050903_db_user:3qHHYv2yylxfhHyg@cluster0.icn9gah.mongodb.net/user_service?retryWrites=true&w=majority&appName=Cluster0
       # API configuration
       API_PREFIX: /api/v1
       API_TOKEN: user_service_secret_token_2024
     ports:
-      - "9009:9009"
+      - "9005:9005"
     # No longer depends on local MongoDB container
     networks:
       - quiz_network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9009/"]
+      test: ["CMD", "curl", "-f", "http://localhost:9005/api/v1/health"]
       timeout: 10s
       retries: 5
       start_period: 30s
+      interval: 30s
+
+  # Admin Setup - Create admin account after all services are ready
+  admin-setup:
+    build:
+      context: ./gateway-api
+      dockerfile: Dockerfile
+    container_name: quiz_admin_setup
+    restart: "no"
+    depends_on:
+      gateway-api:
+        condition: service_healthy
+      user-service-api:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      # Database configuration for MySQL
+      DB_TYPE: mysql
+      DB_HOST: quiz_mysql
+      DB_PORT: 3306
+      DB_USERNAME: gateway_user
+      DB_PASSWORD: gateway_password
+      DB_DATABASE: gateway_db
+      DB_SYNCHRONIZE: "false"
+      DB_LOGGING: "false"
+      # API Gateway configuration
+      USER_SERVICE_BASEURL: http://quiz_user_service_api:9005
+      USER_SERVICE_API_TOKEN: user_service_secret_token_2024
+    networks:
+      - quiz_network
+    command: ["node", "create-admin.js"]
 
 # Named volumes for data persistence
 volumes:
