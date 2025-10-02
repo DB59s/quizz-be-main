@@ -168,7 +168,7 @@ router.get('/me', verifyToken, async (req, res) => {
     res.status(200).json({
       success: true,
       message: 'User profile retrieved successfully',
-      data: userResponse.data.data
+      data: userResponse?.data?.data
     });
   } catch (error) {
     console.error('Get user profile error:', error);

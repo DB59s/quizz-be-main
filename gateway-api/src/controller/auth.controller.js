@@ -173,54 +173,17 @@ async function register(req, res) {
       });
     }
 
-    // For pending accounts (teachers), don't generate tokens
-    if (accountStatus === ACCOUNT_STATUS.PENDING) {
-      console.log(`Teacher registration pending approval: ${email}`);
-      
-      return res.status(201).json({
-        success: true,
-        message: 'Teacher account registered successfully. Your account is pending admin approval.',
-        user: {
-          id: savedAccount.id,
-          email: savedAccount.email,
-          role: savedAccount.role,
-          status: savedAccount.status
-        }
-      });
-    }
+    // Registration successful message based on account status
+    const message = accountStatus === ACCOUNT_STATUS.PENDING
+      ? 'Teacher account registered successfully. Your account is pending admin approval.'
+      : 'Account registered successfully';
 
-    // Generate tokens for active accounts (students)
-    const accessToken = generateAccessToken({
-      account_id: savedAccount.id,
-      role: savedAccount.role
-    });
+    console.log(`Registration completed successfully: ${email} with role: ${userRole}, status: ${accountStatus}`);
 
-    const refreshTokenRaw = generateRefreshToken();
-    const refreshTokenHashed = await hashToken(refreshTokenRaw);
-
-    // Save refresh token
-    const refreshTokenRepo = getRefreshTokenRepository();
-    const refreshTokenEntity = refreshTokenRepo.create({
-      account_id: savedAccount.id,
-      token: refreshTokenHashed,
-      expires_at: getRefreshTokenExpiration()
-    });
-
-    await refreshTokenRepo.save(refreshTokenEntity);
-
-    console.log(`Registration completed successfully: ${email} with role: ${userRole}`);
-
-    // Return response
+    // Return response without tokens
     res.status(201).json({
       success: true,
-      message: 'Account registered successfully',
-      accessToken,
-      refreshToken: refreshTokenRaw,
-      user: {
-        id: savedAccount.id,
-        email: savedAccount.email,
-        role: savedAccount.role
-      }
+      message
     });
 
   } catch (error) {
@@ -310,12 +273,42 @@ async function login(req, res) {
       });
     }
 
-    // Generate tokens
-    const accessToken = generateAccessToken({
-      account_id: account.id,
-      role: account.role
-    });
+    console.log("account là   " , account)
 
+    // Get user info from user service to retrieve student_id or teacher_id
+    let userId = null;
+    try {
+      const userResponse = await callUserService('GET', `/${account.role}/${account.id}`);
+      const userData = userResponse?.data?.data;
+      
+      if (userData) {
+        userId = account.role === ROLES.STUDENT ? userData.student_id : userData.teacher_id;
+      }
+    } catch (serviceError) {
+      console.error(`Failed to get user info from user service:`, serviceError.message);
+      return res.status(500).json({
+        success: false,
+        error: 'User service error',
+        message: 'Failed to retrieve user information'
+      });
+    }
+
+    if (!userId) {
+      return res.status(500).json({
+        success: false,
+        error: 'User not found',
+        message: 'User profile not found in user service'
+      });
+    }
+
+    // Generate tokens with user_id (student_id or teacher_id)
+    const tokenPayload = {
+      account_id: account.id,
+      role: account.role,
+      user_id: userId
+    };
+
+    const accessToken = generateAccessToken(tokenPayload);
     const refreshTokenRaw = generateRefreshToken();
     const refreshTokenHashed = await hashToken(refreshTokenRaw);
 
@@ -329,7 +322,7 @@ async function login(req, res) {
 
     await refreshTokenRepo.save(refreshTokenEntity);
 
-    console.log(`Account logged in: ${email}`);
+    console.log(`Account logged in: ${email} with user_id: ${userId}`);
 
     // Return response
     res.status(200).json({
@@ -340,7 +333,8 @@ async function login(req, res) {
       user: {
         id: account.id,
         email: account.email,
-        role: account.role
+        role: account.role,
+        user_id: userId
       }
     });
 
@@ -425,12 +419,41 @@ async function refresh(req, res) {
     // Token rotation: Remove old refresh token
     await refreshTokenRepo.remove(validRefreshToken);
 
-    // Generate new tokens
-    const newAccessToken = generateAccessToken({
-      account_id: account.id,
-      role: account.role
-    });
+    // Get user info from user service to retrieve student_id or teacher_id
+    let userId = null;
+    try {
+      console.log(account)
+      const userResponse = await callUserService('GET', `/${account.role}s/${account.id}`);
+      const userData = userResponse?.data?.data;
+      
+      if (userData) {
+        userId = account.role === ROLES.STUDENT ? userData.student_id : userData.teacher_id;
+      }
+    } catch (serviceError) {
+      console.error(`Failed to get user info from user service during refresh:`, serviceError.message);
+      return res.status(500).json({
+        success: false,
+        error: 'User service error',
+        message: 'Failed to retrieve user information'
+      });
+    }
 
+    if (!userId) {
+      return res.status(500).json({
+        success: false,
+        error: 'User not found',
+        message: 'User profile not found in user service'
+      });
+    }
+
+    // Generate new tokens with user_id
+    const tokenPayload = {
+      account_id: account.id,
+      role: account.role,
+      user_id: userId
+    };
+
+    const newAccessToken = generateAccessToken(tokenPayload);
     const newRefreshTokenRaw = generateRefreshToken();
     const newRefreshTokenHashed = await hashToken(newRefreshTokenRaw);
 
@@ -443,7 +466,7 @@ async function refresh(req, res) {
 
     await refreshTokenRepo.save(newRefreshTokenEntity);
 
-    console.log(`Tokens refreshed for account: ${account.email}`);
+    console.log(`Tokens refreshed for account: ${account.email} with user_id: ${userId}`);
 
     // Return response
     res.status(200).json({
@@ -607,12 +630,40 @@ async function googleLogin(req, res) {
       }
     }
 
-    // Generate tokens
-    const accessToken = generateAccessToken({
-      account_id: account.id,
-      role: account.role
-    });
+    // Get user info from user service to retrieve student_id or teacher_id
+    let userId = null;
+    try {
+      const userResponse = await callUserService('GET', `/${account.role}s/${account.id}`);
+      const userData = userResponse?.data?.data;
+      
+      if (userData) {
+        userId = account.role === ROLES.STUDENT ? userData.student_id : userData.teacher_id;
+      }
+    } catch (serviceError) {
+      console.error(`Failed to get user info from user service for Google login:`, serviceError.message);
+      return res.status(500).json({
+        success: false,
+        error: 'User service error',
+        message: 'Failed to retrieve user information'
+      });
+    }
 
+    if (!userId) {
+      return res.status(500).json({
+        success: false,
+        error: 'User not found',
+        message: 'User profile not found in user service'
+      });
+    }
+
+    // Generate tokens with user_id
+    const tokenPayload = {
+      account_id: account.id,
+      role: account.role,
+      user_id: userId
+    };
+
+    const accessToken = generateAccessToken(tokenPayload);
     const refreshTokenRaw = generateRefreshToken();
     const refreshTokenHashed = await hashToken(refreshTokenRaw);
 
@@ -626,7 +677,7 @@ async function googleLogin(req, res) {
 
     await refreshTokenRepo.save(refreshTokenEntity);
 
-    console.log(`Google login successful: ${account.email}`);
+    console.log(`Google login successful: ${account.email} with user_id: ${userId}`);
 
     // Return response
     res.status(200).json({
@@ -638,7 +689,8 @@ async function googleLogin(req, res) {
         id: account.id,
         email: account.email,
         role: account.role,
-        provider: account.provider
+        provider: account.provider,
+        user_id: userId
       }
     });
 
@@ -788,12 +840,40 @@ async function googleCallback(req, res) {
       }
     }
 
-    // Generate tokens
-    const accessToken = generateAccessToken({
-      account_id: account.id,
-      role: account.role
-    });
+    // Get user info from user service to retrieve student_id or teacher_id
+    let userId = null;
+    try {
+      const userResponse = await callUserService('GET', `/${account.role}s/${account.id}`);
+      const userData = userResponse?.data?.data;
+      
+      if (userData) {
+        userId = account.role === ROLES.STUDENT ? userData.student_id : userData.teacher_id;
+      }
+    } catch (serviceError) {
+      console.error(`Failed to get user info from user service for Google callback:`, serviceError.message);
+      return res.status(500).json({
+        success: false,
+        error: 'User service error',
+        message: 'Failed to retrieve user information'
+      });
+    }
 
+    if (!userId) {
+      return res.status(500).json({
+        success: false,
+        error: 'User not found',
+        message: 'User profile not found in user service'
+      });
+    }
+
+    // Generate tokens with user_id
+    const tokenPayload = {
+      account_id: account.id,
+      role: account.role,
+      user_id: userId
+    };
+
+    const accessToken = generateAccessToken(tokenPayload);
     const refreshTokenRaw = generateRefreshToken();
     const refreshTokenHashed = await hashToken(refreshTokenRaw);
 
@@ -807,7 +887,7 @@ async function googleCallback(req, res) {
 
     await refreshTokenRepo.save(refreshTokenEntity);
 
-    console.log(`Google callback login successful: ${account.email}`);
+    console.log(`Google callback login successful: ${account.email} with user_id: ${userId}`);
 
     
     const redirectUrl = `https://vuquangduy.online`;
