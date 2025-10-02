@@ -32,6 +32,22 @@ class UserController {
       next(error);
     }
   }
+
+  // DELETE /users/:account_id/:role - Delete user by account ID and role
+  async deleteUserByAccountId(req, res, next) {
+    try {
+      const { account_id, role } = req.params;
+      const user = await userService.deleteUserByAccountId(account_id, role);
+      
+      res.status(200).json({
+        success: true,
+        message: 'User deleted successfully',
+        data: user
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 module.exports = new UserController();

@@ -50,6 +50,26 @@ class UserService {
       throw error;
     }
   }
+
+  // Delete user by account_id and role
+  async deleteUserByAccountId(account_id, role) {
+    try {
+      switch (role.toLowerCase()) {
+        case 'student':
+          return await studentService.deleteStudentByAccountId(account_id);
+        case 'teacher':
+          return await teacherService.deleteTeacherByAccountId(account_id);
+        case 'admin':
+          return await adminService.deleteAdminByAccountId(account_id);
+        default:
+          const error = new Error('Invalid role. Must be student, teacher, or admin');
+          error.statusCode = 400;
+          throw error;
+      }
+    } catch (error) {
+      throw error;
+    }
+  }
 }
 
 module.exports = new UserService();

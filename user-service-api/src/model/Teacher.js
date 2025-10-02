@@ -25,6 +25,11 @@ const teacherSchema = new mongoose.Schema({
     trim: true,
     default: ''
   },
+  university: {
+    type: String,
+    trim: true,
+    default: ''
+  },
   phone_number: {
     type: String,
     trim: true,
