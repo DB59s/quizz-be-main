@@ -20,7 +20,7 @@ const { ROLES, ACCOUNT_STATUS } = require('../utils/constants');
 
 // Initialize OAuth2 client for server-side flow
 const getCallbackUrl = () => {
-  return `${API_BASE_URL}/api/v1/auth/google/callback`;
+  return `${API_BASE_URL}/auth/google/callback`;
 };
 
 const oauth2Client = new google.auth.OAuth2(
@@ -280,9 +280,10 @@ async function login(req, res) {
     try {
       const userResponse = await callUserService('GET', `/${account.role}/${account.id}`);
       const userData = userResponse?.data?.data;
+
       
       if (userData) {
-        userId = account.role === ROLES.STUDENT ? userData.student_id : userData.teacher_id;
+        userId = userData._id
       }
     } catch (serviceError) {
       console.error(`Failed to get user info from user service:`, serviceError.message);
