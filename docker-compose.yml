@@ -55,6 +55,9 @@ services:
       # API Gateway configuration
       USER_SERVICE_BASEURL: https://vuquangduy.online/api/v1
       USER_SERVICE_API_TOKEN: 45f65we46f5ew465few465we46fwe46f4ew65f46w5e4f65we4f65ew46few465f
+      # Google configuration
+      GOOGLE_CLIENT_ID: 70714368044-4om6vvmkuh5q4a03ed8q6q9ubn56840h.apps.googleusercontent.com
+      GOOGLE_CLIENT_SECRET: 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
       # Production URL configuration
       API_BASE_URL: https://vuquangduy.io.vn
       FRONTEND_URL: https://vuquangduy.io.vn
