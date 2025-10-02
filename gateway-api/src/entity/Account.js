@@ -41,7 +41,7 @@ const Account = new EntitySchema({
     },
     status: {
       type: 'enum',
-      enum: ['active', 'banned', 'deleted'],
+      enum: ['active', 'pending', 'banned', 'deleted'],
       default: 'active',
       nullable: false,
     },

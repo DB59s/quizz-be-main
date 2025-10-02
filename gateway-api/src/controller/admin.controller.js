@@ -1,6 +1,7 @@
 const AppDataSource = require('../config/data-source');
 const { hashPassword } = require('../utils/hash');
 const { callUserService } = require('../middlewares/gateway.middleware');
+const { ACCOUNT_STATUS, ROLES } = require('../utils/constants');
 
 // Get repositories
 const getAccountRepository = () => AppDataSource.getRepository('Account');
@@ -257,7 +258,210 @@ async function createAdmin(req, res) {
   }
 }
 
+/**
+ * Get pending teacher accounts (Admin only)
+ * GET /admin/teachers/pending
+ */
+async function getPendingTeachers(req, res) {
+  try {
+    const { page = 1, limit = 10 } = req.query;
+    
+    const accountRepo = getAccountRepository();
+    
+    // Calculate pagination
+    const skip = (page - 1) * limit;
+    
+    // Find pending teacher accounts
+    const [pendingTeachers, total] = await accountRepo.findAndCount({
+      where: { 
+        role: ROLES.TEACHER,
+        status: ACCOUNT_STATUS.PENDING
+      },
+      order: { created_at: 'DESC' },
+      skip: parseInt(skip),
+      take: parseInt(limit)
+    });
+    
+    // Get teacher details from user service for each account
+    const teachersWithDetails = await Promise.all(
+      pendingTeachers.map(async (account) => {
+        try {
+          const teacherDetails = await callUserService('GET', `/teacher/${account.id}`);
+          return {
+            id: account.id,
+            email: account.email,
+            role: account.role,
+            status: account.status,
+            created_at: account.created_at,
+            teacher_details: teacherDetails.data
+          };
+        } catch (error) {
+          console.error(`Failed to fetch teacher details for account ${account.id}:`, error.message);
+          return {
+            id: account.id,
+            email: account.email,
+            role: account.role,
+            status: account.status,
+            created_at: account.created_at,
+            teacher_details: null
+          };
+        }
+      })
+    );
+    
+    res.status(200).json({
+      success: true,
+      message: 'Pending teachers retrieved successfully',
+      data: teachersWithDetails,
+      pagination: {
+        current_page: parseInt(page),
+        total_pages: Math.ceil(total / limit),
+        total_items: total,
+        items_per_page: parseInt(limit)
+      }
+    });
+    
+  } catch (error) {
+    console.error('Get pending teachers error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      message: 'Failed to retrieve pending teachers'
+    });
+  }
+}
+
+/**
+ * Approve teacher account (Admin only)
+ * PUT /admin/teachers/:account_id/approve
+ */
+async function approveTeacher(req, res) {
+  try {
+    const { account_id } = req.params;
+    
+    const accountRepo = getAccountRepository();
+    
+    // Find the teacher account
+    const account = await accountRepo.findOne({ 
+      where: { 
+        id: account_id,
+        role: ROLES.TEACHER
+      } 
+    });
+    
+    if (!account) {
+      return res.status(404).json({
+        success: false,
+        error: 'Teacher not found',
+        message: 'Teacher account not found'
+      });
+    }
+    
+    // Check if account is pending
+    if (account.status !== ACCOUNT_STATUS.PENDING) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid status',
+        message: `Teacher account is already ${account.status}. Only pending accounts can be approved.`
+      });
+    }
+    
+    // Update account status to active
+    account.status = ACCOUNT_STATUS.ACTIVE;
+    await accountRepo.save(account);
+    
+    console.log(`Teacher account approved: ${account.email} (ID: ${account.id})`);
+    
+    res.status(200).json({
+      success: true,
+      message: 'Teacher account approved successfully',
+      user: {
+        id: account.id,
+        email: account.email,
+        role: account.role,
+        status: account.status,
+        updated_at: account.updated_at
+      }
+    });
+    
+  } catch (error) {
+    console.error('Approve teacher error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      message: 'Failed to approve teacher account'
+    });
+  }
+}
+
+/**
+ * Reject teacher account (Admin only)
+ * DELETE /admin/teachers/:account_id/reject
+ */
+async function rejectTeacher(req, res) {
+  try {
+    const { account_id } = req.params;
+    
+    const accountRepo = getAccountRepository();
+    
+    // Find the teacher account
+    const account = await accountRepo.findOne({ 
+      where: { 
+        id: account_id,
+        role: ROLES.TEACHER
+      } 
+    });
+    
+    if (!account) {
+      return res.status(404).json({
+        success: false,
+        error: 'Teacher not found',
+        message: 'Teacher account not found'
+      });
+    }
+    
+    // Check if account is pending
+    if (account.status !== ACCOUNT_STATUS.PENDING) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid status',
+        message: `Teacher account is ${account.status}. Only pending accounts can be rejected.`
+      });
+    }
+    
+    // Delete teacher from user service first
+    try {
+      await callUserService('DELETE', `/users/teacher/${account.id}`);
+      console.log(`Teacher deleted from user service: ${account.id}`);
+    } catch (serviceError) {
+      console.error(`Failed to delete teacher from user service:`, serviceError.message);
+      // Continue with account deletion even if user service fails
+    }
+    
+    // Delete the account
+    await accountRepo.remove(account);
+    
+    console.log(`Teacher account rejected and deleted: ${account.email} (ID: ${account.id})`);
+    
+    res.status(200).json({
+      success: true,
+      message: 'Teacher account rejected and deleted successfully'
+    });
+    
+  } catch (error) {
+    console.error('Reject teacher error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      message: 'Failed to reject teacher account'
+    });
+  }
+}
+
 module.exports = {
   createTeacher,
   createAdmin,
+  getPendingTeachers,
+  approveTeacher,
+  rejectTeacher
 };
