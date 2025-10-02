@@ -79,7 +79,7 @@ async function createAdminAccount() {
     // Tạo user trong user service
     console.log('👤 Đang tạo user trong user service...');
     try {
-      const userServiceResponse = await callUserService('POST', '/api/v1/users', {
+      const userServiceResponse = await callUserService('POST', '/users', {
         account_id: savedAccount.id,
         email: savedAccount.email,
         role: savedAccount.role,
