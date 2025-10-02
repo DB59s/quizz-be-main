@@ -16,6 +16,7 @@ const {
   FRONTEND_URL,
   FRONTEND_PATH
 } = require('../config/env');
+const { ROLES, ACCOUNT_STATUS } = require('../utils/constants');
 
 // Initialize OAuth2 client for server-side flow
 const getCallbackUrl = () => {
@@ -41,7 +42,7 @@ async function register(req, res) {
   let savedAccount = null;
   
   try {
-    const { email, password, full_name, student_code } = req.body;
+    const { email, password, role, full_name, student_code, department, university } = req.body;
 
     // Validate input
     if (!email || !password) {
@@ -49,15 +50,6 @@ async function register(req, res) {
         success: false,
         error: 'Validation failed',
         message: 'Email and password are required'
-      });
-    }
-
-    // Validate full_name and student_code (required for student registration)
-    if (!full_name || !student_code) {
-      return res.status(400).json({
-        success: false,
-        error: 'Validation failed',
-        message: 'Full name and student code are required'
       });
     }
 
@@ -80,8 +72,44 @@ async function register(req, res) {
       });
     }
 
-    // Only allow student registration through public register endpoint
-    const role = 'student';
+    // Validate role (default to student if not provided)
+    const userRole = role ? role.toLowerCase() : ROLES.STUDENT;
+    
+    if (![ROLES.STUDENT, ROLES.TEACHER].includes(userRole)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Validation failed',
+        message: 'Invalid role. Only student and teacher registration is allowed'
+      });
+    }
+
+    // Validate full_name (required for all registrations)
+    if (!full_name) {
+      return res.status(400).json({
+        success: false,
+        error: 'Validation failed',
+        message: 'Full name is required'
+      });
+    }
+
+    // Role-specific validation
+    if (userRole === ROLES.STUDENT) {
+      if (!student_code) {
+        return res.status(400).json({
+          success: false,
+          error: 'Validation failed',
+          message: 'Student code is required for student registration'
+        });
+      }
+    } else if (userRole === ROLES.TEACHER) {
+      if (!department) {
+        return res.status(400).json({
+          success: false,
+          error: 'Validation failed',
+          message: 'Department is required for teacher registration'
+        });
+      }
+    }
 
     const accountRepo = getAccountRepository();
 
@@ -98,27 +126,38 @@ async function register(req, res) {
     // Hash password
     const password_hash = await hashPassword(password);
 
+    // Determine account status based on role
+    const accountStatus = userRole === ROLES.TEACHER ? ACCOUNT_STATUS.PENDING : ACCOUNT_STATUS.ACTIVE;
+
     // Create account
     const newAccount = accountRepo.create({
       email,
       password_hash,
-      role,
-      status: 'active'
+      role: userRole,
+      status: accountStatus
     });
 
     savedAccount = await accountRepo.save(newAccount);
-    console.log(`New account created: ${email} with ID: ${savedAccount.id}`);
+    console.log(`New account created: ${email} with ID: ${savedAccount.id}, role: ${userRole}, status: ${accountStatus}`);
+
+    // Prepare user service data based on role
+    const userServiceData = {
+      account_id: savedAccount.id,
+      email: savedAccount.email,
+      role: savedAccount.role,
+      full_name: full_name
+    };
+
+    if (userRole === ROLES.STUDENT) {
+      userServiceData.student_code = student_code;
+    } else if (userRole === ROLES.TEACHER) {
+      userServiceData.department = department;
+      userServiceData.university = university;
+    }
 
     // Create user in user service
     try {
-      const userServiceResponse = await callUserService('POST', '/users', {
-        account_id: savedAccount.id,
-        email: savedAccount.email,
-        role: savedAccount.role,
-        full_name: full_name,
-        student_code: student_code
-      });
-
+      const userServiceResponse = await callUserService('POST', '/users', userServiceData);
       console.log(`User created in user service for account: ${savedAccount.id}`);
     } catch (serviceError) {
       console.error(`Failed to create user in user service:`, serviceError.message);
@@ -134,7 +173,23 @@ async function register(req, res) {
       });
     }
 
-    // Generate tokens
+    // For pending accounts (teachers), don't generate tokens
+    if (accountStatus === ACCOUNT_STATUS.PENDING) {
+      console.log(`Teacher registration pending approval: ${email}`);
+      
+      return res.status(201).json({
+        success: true,
+        message: 'Teacher account registered successfully. Your account is pending admin approval.',
+        user: {
+          id: savedAccount.id,
+          email: savedAccount.email,
+          role: savedAccount.role,
+          status: savedAccount.status
+        }
+      });
+    }
+
+    // Generate tokens for active accounts (students)
     const accessToken = generateAccessToken({
       account_id: savedAccount.id,
       role: savedAccount.role
@@ -153,7 +208,7 @@ async function register(req, res) {
 
     await refreshTokenRepo.save(refreshTokenEntity);
 
-    console.log(`Registration completed successfully: ${email} with role: ${role}`);
+    console.log(`Registration completed successfully: ${email} with role: ${userRole}`);
 
     // Return response
     res.status(201).json({
@@ -220,7 +275,15 @@ async function login(req, res) {
     }
 
     // Check account status
-    if (account.status !== 'active') {
+    if (account.status === ACCOUNT_STATUS.PENDING) {
+      return res.status(401).json({
+        success: false,
+        error: 'Account pending approval',
+        message: 'Your account is pending admin approval. Please wait for approval before logging in.'
+      });
+    }
+
+    if (account.status !== ACCOUNT_STATUS.ACTIVE) {
       return res.status(401).json({
         success: false,
         error: 'Account disabled',
@@ -1117,6 +1180,115 @@ async function logout(req, res) {
   }
 }
 
+/**
+ * Change password for authenticated user
+ * POST /auth/change-password
+ */
+async function changePassword(req, res) {
+  try {
+    const { account_id } = req.user; // From verifyToken middleware
+    const { oldPassword, newPassword, confirmNewPassword } = req.body;
+
+    // Validate input
+    if (!oldPassword || !newPassword || !confirmNewPassword) {
+      return res.status(400).json({
+        success: false,
+        error: 'Validation failed',
+        message: 'Old password, new password, and confirm new password are required'
+      });
+    }
+
+    // Validate new password length
+    if (newPassword.length < 6) {
+      return res.status(400).json({
+        success: false,
+        error: 'Validation failed',
+        message: 'New password must be at least 6 characters long'
+      });
+    }
+
+    // Check if new password and confirm password match
+    if (newPassword !== confirmNewPassword) {
+      return res.status(400).json({
+        success: false,
+        error: 'Validation failed',
+        message: 'New password and confirm password do not match'
+      });
+    }
+
+    // Check if new password is same as old password
+    if (oldPassword === newPassword) {
+      return res.status(400).json({
+        success: false,
+        error: 'Validation failed',
+        message: 'New password must be different from old password'
+      });
+    }
+
+    const accountRepo = getAccountRepository();
+
+    // Find account
+    const account = await accountRepo.findOne({ where: { id: account_id } });
+    
+    if (!account) {
+      return res.status(404).json({
+        success: false,
+        error: 'Account not found',
+        message: 'Account does not exist'
+      });
+    }
+
+    // Check if account has a password (not Google OAuth only)
+    if (!account.password_hash) {
+      return res.status(400).json({
+        success: false,
+        error: 'No password set',
+        message: 'This account uses Google login and does not have a password. Please use Google to sign in.'
+      });
+    }
+
+    // Verify old password
+    const isOldPasswordValid = await comparePassword(oldPassword, account.password_hash);
+    if (!isOldPasswordValid) {
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid password',
+        message: 'Old password is incorrect'
+      });
+    }
+
+    // Hash new password
+    const newPasswordHash = await hashPassword(newPassword);
+
+    // Update account password
+    account.password_hash = newPasswordHash;
+    await accountRepo.save(account);
+
+    console.log(`Password changed successfully for account: ${account.email}`);
+
+    // Send success notification email (optional)
+    try {
+      await emailService.sendPasswordChangeNotificationEmail(account.email);
+    } catch (emailError) {
+      console.error(`Failed to send password change notification email to ${account.email}:`, emailError);
+      // Don't fail the request if notification email fails
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Password changed successfully'
+    });
+
+  } catch (error) {
+    console.error('Change password error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      message: 'Failed to change password'
+    });
+  }
+}
+
 module.exports = {
   register,
   login,
@@ -1129,4 +1301,5 @@ module.exports = {
   forgotPassword,
   verifyOTP,
   resetPassword,
-}; 
+  changePassword
+};
