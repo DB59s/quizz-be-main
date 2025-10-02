@@ -20,7 +20,7 @@ const { ROLES, ACCOUNT_STATUS } = require('../utils/constants');
 
 // Initialize OAuth2 client for server-side flow
 const getCallbackUrl = () => {
-  return `${API_BASE_URL}/auth/google/callback`;
+  return `${API_BASE_URL}/api/v1/auth/google/callback`;
 };
 
 const oauth2Client = new google.auth.OAuth2(
