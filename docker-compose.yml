@@ -54,7 +54,7 @@ services:
       REFRESH_TOKEN_EXPIRES_DAYS: 7
       # API Gateway configuration
       USER_SERVICE_BASEURL: https://vuquangduy.online/api/v1
-      USER_SERVICE_API_TOKEN: user_service_secret_token_2024
+      USER_SERVICE_API_TOKEN: 45f65we46f5ew465few465we46fwe46f4ew65f46w5e4f65we4f65ew46few465f
       # Production URL configuration
       API_BASE_URL: https://vuquangduy.io.vn
       FRONTEND_URL: https://vuquangduy.io.vn
@@ -85,7 +85,7 @@ services:
       MONGO_URI: mongodb+srv://vuduy050903_db_user:3qHHYv2yylxfhHyg@cluster0.icn9gah.mongodb.net/user_service?retryWrites=true&w=majority&appName=Cluster0
       # API configuration
       API_PREFIX: /api/v1
-      API_TOKEN: user_service_secret_token_2024
+      API_TOKEN: 45f65we46f5ew465few465we46fwe46f4ew65f46w5e4f65we4f65ew46few465f
     ports:
       - "9005:9005"
     # No longer depends on local MongoDB container

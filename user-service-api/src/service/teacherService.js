@@ -4,16 +4,16 @@ class TeacherService {
   // Create a new teacher
   async createTeacher(teacherData) {
     try {
-      // Validate required fields for teacher creation by admin
+      // Validate required fields for teacher creation
       if (!teacherData.full_name || !teacherData.account_id) {
         const error = new Error('Full name and account_id are required');
         error.statusCode = 400;
         throw error;
       }
 
-      // For admin-created teachers, department is required
+      // Department is required for teacher
       if (!teacherData.department) {
-        const error = new Error('Department (nơi giảng dạy) is required for teacher');
+        const error = new Error('Department is required for teacher');
         error.statusCode = 400;
         throw error;
       }
