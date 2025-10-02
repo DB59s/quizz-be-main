@@ -23,6 +23,8 @@ const getCallbackUrl = () => {
   return `${API_BASE_URL}/api/v1/auth/google/callback`;
 };
 
+console.log("API_BASE_URL là: ", API_BASE_URL);
+
 const oauth2Client = new google.auth.OAuth2(
   GOOGLE_CLIENT_ID,
   GOOGLE_CLIENT_SECRET,
