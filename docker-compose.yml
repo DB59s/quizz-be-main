@@ -101,6 +101,39 @@ services:
       start_period: 30s
       interval: 30s
 
+  # Class Service API
+  class-service-api:
+    build:
+      context: ./class-service-api
+      dockerfile: Dockerfile
+    container_name: quiz_class_service_api
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 9007
+      # MongoDB Atlas configuration
+      MONGODB_URI: mongodb+srv://vuduy050903_db_user:kgbLaC63jjeTbDLb@class-service.sdqxcsl.mongodb.net/?retryWrites=true&w=majority&appName=class-service
+      MONGO_URI_COMPASS: mongodb+srv://vuduy050903_db_user:kgbLaC63jjeTbDLb@class-service.sdqxcsl.mongodb.net/
+      DB_DATABASE: class_service_dev
+      # API configuration
+      API_TOKEN: your-secret-token-here-change-in-production
+      # External Services
+      USER_SERVICE_BASEURL: http://user-service-api:9005/api/v1
+      USER_SERVICE_API_TOKEN: 45f65we46f5ew465few465we46fwe46f4ew65f46w5e4f65we4f65ew46few465f
+    ports:
+      - "9007:9007"
+    depends_on:
+      user-service-api:
+        condition: service_healthy
+    networks:
+      - quiz_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9007/"]
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+      interval: 30s
+
   # Admin Setup - Create admin account after all services are ready
   admin-setup:
     build:
