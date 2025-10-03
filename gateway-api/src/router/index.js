@@ -2,6 +2,7 @@ const express = require('express');
 const authRouter = require('./auth.router');
 const userRouter = require('./user.router');
 const adminRouter = require('./admin.router');
+const classRouter = require('./class.router');
 
 const router = express.Router();
 
@@ -16,6 +17,7 @@ const router = express.Router();
 router.use('/auth', authRouter);
 router.use('/users', userRouter);
 router.use('/admin', adminRouter);
+router.use('/classes', classRouter);
 
 /**
  * @swagger
@@ -99,6 +101,7 @@ router.get('/', (req, res) => {
       auth: '/api/v1/auth',
       users: '/api/v1/users',
       admin: '/api/v1/admin',
+      classes: '/api/v1/classes',
       docs: '/api-docs'
     }
   });
