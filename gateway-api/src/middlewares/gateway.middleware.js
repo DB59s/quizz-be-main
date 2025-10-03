@@ -245,11 +245,25 @@ function requireRoleOnly(allowedRoles) {
         });
       }
 
-      // Add user info to request
-      req.user = {
-        account_id: decoded.account_id,
-        role: decoded.role
-      };
+      // Add user info to request (only if not already set by verifyToken)
+      if (!req.user) {
+        req.user = {
+          account_id: decoded.account_id,
+          role: decoded.role,
+          user_id: decoded.user_id
+        };
+
+        // Map user_id to specific role-based ID
+        if (decoded.user_id) {
+          if (decoded.role === 'admin') {
+            req.user.admin_id = decoded.user_id;
+          } else if (decoded.role === 'student') {
+            req.user.student_id = decoded.user_id;
+          } else if (decoded.role === 'teacher') {
+            req.user.teacher_id = decoded.user_id;
+          }
+        }
+      }
 
       next();
       
