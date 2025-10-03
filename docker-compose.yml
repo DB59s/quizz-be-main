@@ -55,6 +55,9 @@ services:
       # API Gateway configuration
       USER_SERVICE_BASEURL: https://vuquangduy.online/api/v1
       USER_SERVICE_API_TOKEN: 45f65we46f5ew465few465we46fwe46f4ew65f46w5e4f65we4f65ew46few465f
+      # Google configuration
+      GOOGLE_CLIENT_ID: 70714368044-ggb9g17lp5vtr6elo9gtrkvvpq9hgflb.apps.googleusercontent.com
+      GOOGLE_CLIENT_SECRET: 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
       # Production URL configuration
       API_BASE_URL: https://vuquangduy.io.vn
       FRONTEND_URL: https://vuquangduy.io.vn
@@ -122,8 +125,8 @@ services:
       DB_SYNCHRONIZE: "false"
       DB_LOGGING: "false"
       # API Gateway configuration
-      USER_SERVICE_BASEURL: http://quiz_user_service_api:9005
-      USER_SERVICE_API_TOKEN: user_service_secret_token_2024
+      USER_SERVICE_BASEURL: http://vuquangduy.online/api/v1
+      USER_SERVICE_API_TOKEN: 45f65we46f5ew465few465we46fwe46f4ew65f46w5e4f65we4f65ew46few465f
     networks:
       - quiz_network
     command: ["node", "create-admin.js"]
