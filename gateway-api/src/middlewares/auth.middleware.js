@@ -48,6 +48,17 @@ function verifyToken(req, res, next) {
       role: decoded?.role
     };
 
+    // Map user_id to specific role-based ID
+    if (decoded?.user_id) {
+      if (decoded.role === 'admin') {
+        req.user.admin_id = decoded.user_id;
+      } else if (decoded.role === 'student') {
+        req.user.student_id = decoded.user_id;
+      } else if (decoded.role === 'teacher') {
+        req.user.teacher_id = decoded.user_id;
+      }
+    }
+
     next();
   } catch (error) {
     console.error('Token verification error:', error.message);
