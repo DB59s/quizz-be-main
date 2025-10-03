@@ -16,6 +16,22 @@ class TeacherController {
     }
   }
 
+  // GET /teachers/:id - Get teacher by _id
+  async getTeacherById(req, res, next) {
+    try {
+      const { id } = req.params;
+      const teacher = await teacherService.getTeacherById(id);
+      res.status(200).json({
+        success: true,
+        message: 'Teacher retrieved successfully',
+        data: teacher
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+
   // GET /teachers/:account_id - Get teacher by account_id
   async getTeacherByAccountId(req, res, next) {
     try {

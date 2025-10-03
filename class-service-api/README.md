@@ -1,12 +1,13 @@
-# Base Backend NodeJS
+# Class Service API
 
-Một base backend sử dụng NodeJS, ExpressJS và MongoDB với cấu trúc rõ ràng và dễ mở rộng.
+API quản lý lớp học sử dụng NodeJS, ExpressJS và MongoDB với cấu trúc rõ ràng và dễ mở rộng.
 
 ## 🛠 Công nghệ sử dụng
 
 - **NodeJS** với **ExpressJS**
 - **MongoDB** với **Mongoose**
 - **Token-based Authentication**
+- **Swagger UI** - API Documentation
 - **JavaScript** (ES6+)
 
 ## 📁 Cấu trúc dự án
@@ -18,22 +19,18 @@ project-root/
 │   │   ├── env.js       # Quản lý biến môi trường
 │   │   ├── data-source.js # Cấu hình MongoDB
 │   │   ├── cors.js      # Cấu hình CORS
+│   │   ├── swagger.js   # Cấu hình Swagger
 │   │   └── index.js     # Export tất cả config
-│   ├── entity/          # Mongoose Schema
-│   │   └── User.js
-│   ├── model/           # Model cho business logic
-│   │   └── User.js
+│   ├── models/          # Mongoose Models
+│   │   └── Class.js     # Class schema
 │   ├── middleware/      # Middleware
 │   │   ├── authMiddleware.js # Token verification
 │   │   └── index.js
-│   ├── service/         # Business logic
-│   │   ├── userService.js
-│   │   └── index.js
 │   ├── controller/      # Xử lý request/response
-│   │   ├── userController.js
+│   │   ├── classController.js
 │   │   └── index.js
 │   ├── router/          # Định nghĩa routes
-│   │   ├── userRouter.js
+│   │   ├── classRouter.js
 │   │   └── index.js
 │   ├── app.js          # Khởi tạo Express app
 │   └── server.js       # Entry point
@@ -101,74 +98,102 @@ npm run start
 
 ### Base URLs
 - **Development:** `http://localhost:3000`
-- **API Base:** `/api`
+- **API Base:** `/api/v1`
+- **Swagger Docs:** `http://localhost:3000/api-docs`
 
-### User Endpoints
+### Class Endpoints
 
-**🔒 Tất cả các endpoint user yêu cầu token authentication**
+**🔒 Tất cả các endpoint class yêu cầu token authentication**
 
 | Method | Endpoint | Mô tả |
 |--------|----------|-------|
-| GET | `/api/users` | Lấy danh sách tất cả user |
-| GET | `/api/users/:id` | Lấy thông tin user theo ID |
-| POST | `/api/users` | Tạo user mới |
-| PUT | `/api/users/:id` | Cập nhật user |
-| DELETE | `/api/users/:id` | Xóa user |
+| POST | `/api/v1/classes` | Tạo lớp học mới |
+| PATCH | `/api/v1/classes/:class_id` | Cập nhật lớp học |
+| DELETE | `/api/v1/classes/:class_id` | Xóa lớp học |
+| GET | `/api/v1/classes/:teacher_id` | Lấy danh sách lớp của giáo viên |
+| GET | `/api/v1/classes/teacher_id/:class_id` | Lấy chi tiết lớp học |
 
 ### Other Endpoints
 
 | Method | Endpoint | Mô tả |
 |--------|----------|-------|
 | GET | `/` | Trang chủ API |
-| GET | `/api` | Thông tin API |
-| GET | `/api/health` | Health check |
+| GET | `/api/v1/health` | Health check |
+| GET | `/api-docs` | Swagger API Documentation |
 
 ## 📝 Ví dụ sử dụng
 
 ### Authentication
-Tất cả các request đến `/api/users` cần có token trong header:
+Tất cả các request đến `/api/v1/classes` cần có token trong header:
 ```bash
 Authorization: Bearer your-secret-token-here-change-in-production
 ```
 
-### Tạo user mới
+### 1. Tạo lớp học mới
 ```bash
-curl -X POST http://localhost:3000/api/users \
+curl -X POST http://localhost:3000/api/v1/classes \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer your-secret-token-here-change-in-production" \
   -d '{
-    "name": "John Doe",
-    "email": "john@example.com"
+    "teacher_id": "teacher123",
+    "name": "Lập trình Web",
+    "description": "Khóa học lập trình web cơ bản",
+    "max_students": 30
   }'
 ```
 
-### Lấy danh sách users
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Class created successfully",
+  "data": {
+    "_id": "507f1f77bcf86cd799439011",
+    "class_code": "ABC12345",
+    "name": "Lập trình Web",
+    "description": "Khóa học lập trình web cơ bản",
+    "max_students": 30,
+    "current_students": 0,
+    "teacher_id": "teacher123",
+    "status": "active",
+    "created_at": "2025-10-03T08:30:00.000Z",
+    "updated_at": "2025-10-03T08:30:00.000Z"
+  }
+}
+```
+
+### 2. Lấy danh sách lớp của giáo viên
 ```bash
-curl http://localhost:3000/api/users \
+curl http://localhost:3000/api/v1/classes/teacher123 \
   -H "Authorization: Bearer your-secret-token-here-change-in-production"
 ```
 
-### Lấy user theo ID
+### 3. Lấy chi tiết lớp học
 ```bash
-curl http://localhost:3000/api/users/507f1f77bcf86cd799439011 \
+curl "http://localhost:3000/api/v1/classes/teacher_id/507f1f77bcf86cd799439011?teacher_id=teacher123" \
   -H "Authorization: Bearer your-secret-token-here-change-in-production"
 ```
 
-### Cập nhật user
+### 4. Cập nhật lớp học
 ```bash
-curl -X PUT http://localhost:3000/api/users/507f1f77bcf86cd799439011 \
+curl -X PATCH http://localhost:3000/api/v1/classes/507f1f77bcf86cd799439011 \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer your-secret-token-here-change-in-production" \
   -d '{
-    "name": "Jane Doe",
-    "email": "jane@example.com"
+    "teacher_id": "teacher123",
+    "name": "Lập trình Web Nâng cao",
+    "status": "inactive"
   }'
 ```
 
-### Xóa user
+### 5. Xóa lớp học
 ```bash
-curl -X DELETE http://localhost:3000/api/users/507f1f77bcf86cd799439011 \
-  -H "Authorization: Bearer your-secret-token-here-change-in-production"
+curl -X DELETE http://localhost:3000/api/v1/classes/507f1f77bcf86cd799439011 \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your-secret-token-here-change-in-production" \
+  -d '{
+    "teacher_id": "teacher123"
+  }'
 ```
 
 ### Response format
@@ -191,50 +216,51 @@ curl -X DELETE http://localhost:3000/api/users/507f1f77bcf86cd799439011 \
 
 ## 🏗 Kiến trúc
 
-### Mongoose Schema (Entity)
-- **Entity**: Định nghĩa Mongoose Schema, mapping với MongoDB collection
-- Validation tự động với Mongoose
-- Indexes và constraints
-
-### Service Layer
-- Chứa business logic
-- Xử lý CRUD operations với Mongoose
-- Error handling
+### Class Schema
+Schema `Class` bao gồm các trường:
+- `_id`: ObjectId tự động
+- `class_code`: Mã lớp unique (tự sinh 6-8 ký tự)
+- `name`: Tên lớp (required, 3-100 ký tự)
+- `description`: Mô tả (tối đa 500 ký tự)
+- `max_students`: Số học sinh tối đa (required, >= 1)
+- `current_students`: Số học sinh hiện tại (default: 0)
+- `teacher_id`: ID giáo viên (required)
+- `status`: Trạng thái (active/inactive/closed, default: active)
+- `created_at`: Thời gian tạo
+- `updated_at`: Thời gian cập nhật
 
 ### Controller Layer  
 - Xử lý HTTP requests/responses
-- Gọi service methods
-- Format response
+- Validate dữ liệu đầu vào
+- Kiểm tra quyền truy cập (teacher_id)
+- Format response chuẩn JSON
 
 ### Middleware Layer
-- **authMiddleware**: Xác thực token
-- Có thể thêm các middleware khác (logging, rate limiting, etc.)
+- **authMiddleware**: Xác thực Bearer token
+- Bảo vệ tất cả routes `/api/v1/classes`
 
 ### Router Layer
-- Định nghĩa routes
-- Apply middleware
+- Định nghĩa routes với Swagger annotations
+- Apply authMiddleware
 - Mount vào Express app
 
 ## 🔧 Mở rộng
 
-### Thêm Mongoose Schema mới
-1. Tạo file schema trong `src/entity/`
+### Thêm Model mới
+1. Tạo file schema trong `src/models/`
 2. Define schema với validation rules
 3. Export model
 
-### Thêm Service mới
-1. Tạo file trong `src/service/`
-2. Import Mongoose model
-3. Export trong `src/service/index.js`
-
 ### Thêm Controller mới
 1. Tạo file trong `src/controller/`
-2. Export trong `src/controller/index.js`
+2. Implement các async functions với try/catch
+3. Export trong `src/controller/index.js`
 
 ### Thêm Router mới
 1. Tạo file trong `src/router/`
-2. Apply middleware nếu cần (verifyToken)
-3. Mount trong `src/router/index.js`
+2. Thêm Swagger annotations cho documentation
+3. Apply authMiddleware nếu cần
+4. Mount trong `src/router/index.js`
 
 ### Thêm Middleware mới
 1. Tạo file trong `src/middleware/`
