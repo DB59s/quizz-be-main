@@ -185,6 +185,12 @@ npm run start
 | POST | `/api/auth/refresh` | Refresh access token |
 | GET | `/api/auth/me` | Lấy thông tin user hiện tại |
 
+### Class Management Endpoints
+
+| Method | Endpoint | Mô tả | Auth |
+|--------|----------|-------|------|
+| POST | `/api/v1/classes` | Tạo lớp học mới | Teacher |
+
 ### Other Endpoints
 
 | Method | Endpoint | Mô tả |

@@ -13,5 +13,9 @@ module.exports = {
   DB_DATABASE: process.env.DB_DATABASE || 'base_be_dev',
   
   // Authentication
-  API_TOKEN: process.env.API_TOKEN || 'your-secret-token-here-change-in-production'
+  API_TOKEN: process.env.API_TOKEN || 'your-secret-token-here-change-in-production',
+  
+  // External Services
+  USER_SERVICE_BASEURL: process.env.USER_SERVICE_BASEURL || 'http://localhost:3001/api/v1',
+  USER_SERVICE_API_TOKEN: process.env.USER_SERVICE_API_TOKEN || ''
 };

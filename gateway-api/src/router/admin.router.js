@@ -1,5 +1,6 @@
 const express = require('express');
 const { requireRoleOnly } = require('../middlewares/gateway.middleware');
+const { verifyToken } = require('../middlewares/auth.middleware');
 const { createTeacher, createAdmin, getPendingTeachers, approveTeacher, rejectTeacher } = require('../controller/admin.controller');
 
 const router = express.Router();
@@ -79,7 +80,7 @@ const router = express.Router();
  *       500:
  *         description: Internal server error
  */
-router.post('/teachers', requireRoleOnly(['admin']), createTeacher);
+router.post('/teachers', verifyToken, requireRoleOnly(['admin']), createTeacher);
 
 /**
  * @swagger
@@ -143,7 +144,7 @@ router.post('/teachers', requireRoleOnly(['admin']), createTeacher);
  *       500:
  *         description: Internal server error
  */
-router.post('/admins', requireRoleOnly(['admin']), createAdmin);
+router.post('/admins', verifyToken, requireRoleOnly(['admin']), createAdmin);
 
 /**
  * @swagger
@@ -191,7 +192,7 @@ router.post('/admins', requireRoleOnly(['admin']), createAdmin);
  *       500:
  *         description: Internal server error
  */
-router.get('/teachers/pending', requireRoleOnly(['admin']), getPendingTeachers);
+router.get('/teachers/pending',  requireRoleOnly(['admin']), getPendingTeachers);
 
 /**
  * @swagger

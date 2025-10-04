@@ -16,6 +16,22 @@ class StudentController {
     }
   }
 
+  // GET /students/:id - Get student by _id
+  async getStudentById(req, res, next) {
+    try {
+      const { id } = req.params;
+      const student = await studentService.getStudentById(id);
+      
+      res.status(200).json({
+        success: true,
+        message: 'Student retrieved successfully',
+        data: student
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   // GET /students/:account_id - Get student by account_id
   async getStudentByAccountId(req, res, next) {
     try {
