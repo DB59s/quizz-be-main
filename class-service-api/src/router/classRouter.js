@@ -88,7 +88,7 @@ router.patch('/:class_id', updateClass);
  * @swagger
  * /api/v1/classes/{class_id}:
  *   delete:
- *     summary: Delete a class
+ *     summary: Delete a class (soft delete - sets status to inactive)
  *     tags: [Classes]
  *     security:
  *       - BearerAuth: []
@@ -107,7 +107,7 @@ router.patch('/:class_id', updateClass);
  *             $ref: '#/components/schemas/DeleteClassRequest'
  *     responses:
  *       200:
- *         description: Class deleted successfully
+ *         description: Class deleted successfully (status changed to inactive)
  *         content:
  *           application/json:
  *             schema:

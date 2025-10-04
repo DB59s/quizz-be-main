@@ -178,6 +178,7 @@ Authorization: Bearer {token}
 
 **Response Success (200):**
 ```json
+
 {
   "success": true,
   "message": "Class details retrieved successfully",

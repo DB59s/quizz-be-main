@@ -127,12 +127,15 @@ const getStudentClasses = async (req, res) => {
 
     // Find registrations with filter
     const registrations = await StudentClass.find(filter)
-      .populate('class_id')
+      .populate({
+        path: 'class_id',
+        match: { status: 'active' } // Only populate active classes
+      })
       .sort({ created_at: -1 });
 
     // Format response
     const formattedData = registrations
-      .filter(reg => reg.class_id) // Only include if class still exists
+      .filter(reg => reg.class_id) // Only include if class still exists and is active
       .map(reg => ({
         registration_id: reg._id,
         status: reg.status,

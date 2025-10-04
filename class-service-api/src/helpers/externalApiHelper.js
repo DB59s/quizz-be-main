@@ -9,7 +9,7 @@ const env = require('../config/env');
 const getTeacherInfo = async (teacherId) => {
   try {
     const response = await axios.get(
-      `${env.USER_SERVICE_BASEURL}/teacher/${teacherId}`,
+      `${env.USER_SERVICE_BASEURL}/teacher/account/${teacherId}`,
       {
         headers: {
           'Authorization': `Bearer ${env.USER_SERVICE_API_TOKEN}`
@@ -46,7 +46,7 @@ const getTeacherInfo = async (teacherId) => {
 const getStudentInfo = async (studentId) => {
   try {
     const response = await axios.get(
-      `${env.USER_SERVICE_BASEURL}/student/${studentId}`,
+      `${env.USER_SERVICE_BASEURL}/student/account/${studentId}`,
       {
         headers: {
           'Authorization': `Bearer ${env.USER_SERVICE_API_TOKEN}`

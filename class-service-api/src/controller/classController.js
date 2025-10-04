@@ -169,7 +169,7 @@ const updateClass = async (req, res) => {
 };
 
 /**
- * Delete a class
+ * Delete a class (soft delete - changes status to inactive)
  * DELETE /api/classes/:class_id
  */
 const deleteClass = async (req, res) => {
@@ -206,13 +206,17 @@ const deleteClass = async (req, res) => {
       });
     }
 
-    // Delete the class
-    await Class.findByIdAndDelete(class_id);
+    // Soft delete: Update status to inactive instead of deleting
+    const updatedClass = await Class.findByIdAndUpdate(
+      class_id,
+      { status: CLASS_STATUS.INACTIVE },
+      { new: true }
+    );
 
     return res.status(200).json({
       success: true,
       message: 'Class deleted successfully',
-      data: { class_id }
+      data: updatedClass
     });
   } catch (error) {
     console.error('Delete class error:', error);
@@ -242,8 +246,11 @@ const getClassesByTeacher = async (req, res) => {
   try {
     const { teacher_id } = req.params;
 
-    // Find all classes for this teacher
-    const classes = await Class.find({ teacher_id }).sort({ created_at: -1 });
+    // Find all active classes for this teacher
+    const classes = await Class.find({ 
+      teacher_id,
+      status: CLASS_STATUS.ACTIVE 
+    }).sort({ created_at: -1 });
 
     return res.status(200).json({
       success: true,

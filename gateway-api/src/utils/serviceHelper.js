@@ -8,7 +8,7 @@ const axios = require('axios');
  * @param {string} config.apiToken - API token for authentication
  * @param {string} method - HTTP method (GET, POST, PUT, PATCH, DELETE)
  * @param {string} path - Service endpoint path (e.g., '/classes')
- * @param {Object} data - Request data (for POST, PUT, PATCH requests)
+ * @param {Object} data - Request data (for POST, PUT, PATCH, DELETE requests)
  * @param {Object} options - Additional axios options
  * @returns {Promise} - Axios response
  */
@@ -35,8 +35,8 @@ async function callService({ serviceName, baseUrl, apiToken }, method, path, dat
     ...options
   };
 
-  // Add data for POST, PUT, PATCH requests
-  if (['post', 'put', 'patch'].includes(method.toLowerCase()) && data) {
+  // Add data for POST, PUT, PATCH, DELETE requests
+  if (['post', 'put', 'patch', 'delete'].includes(method.toLowerCase()) && data) {
     config.data = data;
   }
 
