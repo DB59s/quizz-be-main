@@ -1,8 +1,8 @@
 services:
   # MySQL Database for Gateway API
-  quiz_mysql:
+  quiz_mysql_gateway:
     image: mysql:8.0
-    container_name: quiz_mysql
+    container_name: quiz_mysql_gateway
     restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: rootpassword
@@ -12,8 +12,32 @@ services:
     ports:
       - "3307:3306"
     volumes:
-      - mysql_data:/var/lib/mysql
-      - ./mysql-init:/docker-entrypoint-initdb.d
+      - mysql_gateway_data:/var/lib/mysql
+      - ./mysql-init/01-init.sql:/docker-entrypoint-initdb.d/01-init.sql
+    networks:
+      - quiz_network
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -prootpassword --silent || exit 1"]
+      timeout: 5s
+      retries: 20
+      interval: 3s
+      start_period: 45s
+
+  # MySQL Database for Question Service API
+  quiz_mysql_question:
+    image: mysql:8.0
+    container_name: quiz_mysql_question
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: question_db
+      MYSQL_USER: question_user
+      MYSQL_PASSWORD: question_password
+    ports:
+      - "3308:3306"
+    volumes:
+      - mysql_question_data:/var/lib/mysql
+      - ./mysql-init/02-question-init.sql:/docker-entrypoint-initdb.d/02-question-init.sql
     networks:
       - quiz_network
     healthcheck:
@@ -34,14 +58,14 @@ services:
     container_name: quiz_gateway_api
     restart: unless-stopped
     depends_on:
-      quiz_mysql:
+      quiz_mysql_gateway:
         condition: service_healthy
     environment:
       NODE_ENV: production
       PORT: 9006
       # Database configuration for MySQL
       DB_TYPE: mysql
-      DB_HOST: quiz_mysql
+      DB_HOST: quiz_mysql_gateway
       DB_PORT: 3306
       DB_USERNAME: gateway_user
       DB_PASSWORD: gateway_password
@@ -136,6 +160,39 @@ services:
       start_period: 30s
       interval: 30s
 
+  # Question Service API
+  question-service-api:
+    build:
+      context: ./question-service-api
+      dockerfile: Dockerfile
+    container_name: quiz_question_service_api
+    restart: unless-stopped
+    depends_on:
+      quiz_mysql_question:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 9008
+      # Database configuration for MySQL
+      DB_TYPE: mysql
+      DB_HOST: quiz_mysql_question
+      DB_PORT: 3306
+      DB_USERNAME: question_user
+      DB_PASSWORD: question_password
+      DB_DATABASE: question_db
+      DB_SYNCHRONIZE: "true"
+      DB_LOGGING: "false"
+    ports:
+      - "9008:9008"
+    networks:
+      - quiz_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9008/api/health"]
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+      interval: 30s
+
   # Admin Setup - Create admin account after all services are ready
   admin-setup:
     build:
@@ -152,7 +209,7 @@ services:
       NODE_ENV: production
       # Database configuration for MySQL
       DB_TYPE: mysql
-      DB_HOST: quiz_mysql
+      DB_HOST: quiz_mysql_gateway
       DB_PORT: 3306
       DB_USERNAME: gateway_user
       DB_PASSWORD: gateway_password
@@ -168,7 +225,9 @@ services:
 
 # Named volumes for data persistence
 volumes:
-  mysql_data:
+  mysql_gateway_data:
+    driver: local
+  mysql_question_data:
     driver: local
   # mongo_data removed since we use MongoDB Atlas
 
