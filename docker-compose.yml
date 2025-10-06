@@ -53,7 +53,7 @@ services:
       JWT_EXPIRES_IN: 15m
       REFRESH_TOKEN_EXPIRES_DAYS: 7
       # API Gateway configuration
-      USER_SERVICE_BASEURL: http://user-service-api:9005/api/v1
+      USER_SERVICE_BASEURL: http://user-service-api:9004/api/v1
       USER_SERVICE_API_TOKEN: 45f65we46f5ew465few465we46fwe46f4ew65f46w5e4f65we4f65ew46few465f
       CLASS_SERVICE_BASEURL: http://class-service-api:9007/api/v1
       CLASS_SERVICE_API_TOKEN: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2NvdW50X2lkIjoiZTAxZWQ0NTItODk5Zi00ZWE0LWIwZDEtMjNhZWE2Yzk5NjBkIiwicm9sZSI6InN0dWRlbnQiLCJ1c2VyX2lkIjoiNjhkZjk4OTNjZDA1Yzk2MjgyNGU4NTI0IiwiaWF0IjoxNzU5NTQ0ODQ4LCJleHAiOjE3NTk1NDU3NDgsImF1ZCI6ImFwaS11c2VycyIsImlzcyI6ImF1dGgtc2VydmljZSJ9.y-fbcJPEyZTzWTohMT_XotUnRoejWSa0aOFz-NY00JY
@@ -85,19 +85,19 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
-      PORT: 9005
+      PORT: 9004
       # MongoDB Atlas configuration
       MONGO_URI: mongodb+srv://vuduy050903_db_user:3qHHYv2yylxfhHyg@cluster0.icn9gah.mongodb.net/user_service?retryWrites=true&w=majority&appName=Cluster0
       # API configuration
       API_PREFIX: /api/v1
       API_TOKEN: 45f65we46f5ew465few465we46fwe46f4ew65f46w5e4f65we4f65ew46few465f
     ports:
-      - "9005:9005"
+      - "9004:9004"
     # No longer depends on local MongoDB container
     networks:
       - quiz_network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9005/api/v1/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:9004/api/v1/health"]
       timeout: 10s
       retries: 5
       start_period: 30s
@@ -120,7 +120,7 @@ services:
       # API configuration
       API_TOKEN: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2NvdW50X2lkIjoiZTAxZWQ0NTItODk5Zi00ZWE0LWIwZDEtMjNhZWE2Yzk5NjBkIiwicm9sZSI6InN0dWRlbnQiLCJ1c2VyX2lkIjoiNjhkZjk4OTNjZDA1Yzk2MjgyNGU4NTI0IiwiaWF0IjoxNzU5NTQ0ODQ4LCJleHAiOjE3NTk1NDU3NDgsImF1ZCI6ImFwaS11c2VycyIsImlzcyI6ImF1dGgtc2VydmljZSJ9.y-fbcJPEyZTzWTohMT_XotUnRoejWSa0aOFz-NY00JY
       # External Services
-      USER_SERVICE_BASEURL: http://user-service-api:9005/api/v1
+      USER_SERVICE_BASEURL: http://user-service-api:9004/api/v1
       USER_SERVICE_API_TOKEN: 45f65we46f5ew465few465we46fwe46f4ew65f46w5e4f65we4f65ew46few465f
     ports:
       - "9007:9007"
@@ -160,7 +160,7 @@ services:
       DB_SYNCHRONIZE: "false"
       DB_LOGGING: "false"
       # API Gateway configuration
-      USER_SERVICE_BASEURL: http://user-service-api:9005/api/v1
+      USER_SERVICE_BASEURL: http://user-service-api:9004/api/v1
       USER_SERVICE_API_TOKEN: 45f65we46f5ew465few465we46fwe46f4ew65f46w5e4f65we4f65ew46few465f
     networks:
       - quiz_network

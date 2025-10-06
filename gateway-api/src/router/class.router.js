@@ -365,7 +365,7 @@ router.get('/teachers', verifyToken, requireRoleOnly(['teacher']), getTeacherCla
  *       500:
  *         description: Internal server error
  */
-router.get('/:class_id', verifyToken, requireRoleOnly(['teacher']), getClassDetails);
+router.get('/details/:class_id', verifyToken, requireRoleOnly(['teacher']), getClassDetails);
 
 /**
  * @swagger
