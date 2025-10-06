@@ -44,7 +44,7 @@ async function register(req, res) {
   let savedAccount = null;
   
   try {
-    const { email, password, role, full_name, student_code, department, university } = req.body;
+    const { email, password, phone_number,  role, full_name, student_code, department, university } = req.body;
 
     // Validate input
     if (!email || !password) {
@@ -94,6 +94,25 @@ async function register(req, res) {
       });
     }
 
+    // Validate phone_number (required for all registrations)
+    if (!phone_number) {
+      return res.status(400).json({
+        success: false,
+        error: 'Validation failed',
+        message: 'Phone number is required'
+      });
+    }
+
+    // Validate phone_number format
+    const phoneRegex = /^[0-9]{10}$/;
+    if (!phoneRegex.test(phone_number)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Validation failed',
+        message: 'Invalid phone number format'
+      });
+    }
+
     // Role-specific validation
     if (userRole === ROLES.STUDENT) {
       if (!student_code) {
@@ -129,7 +148,9 @@ async function register(req, res) {
     const password_hash = await hashPassword(password);
 
     // Determine account status based on role
-    const accountStatus = userRole === ROLES.TEACHER ? ACCOUNT_STATUS.PENDING : ACCOUNT_STATUS.ACTIVE;
+    // const accountStatus = userRole === ROLES.TEACHER ? ACCOUNT_STATUS.PENDING : ACCOUNT_STATUS.ACTIVE;
+
+    const accountStatus = ACCOUNT_STATUS.ACTIVE;
 
     // Create account
     const newAccount = accountRepo.create({
@@ -147,7 +168,8 @@ async function register(req, res) {
       account_id: savedAccount.id,
       email: savedAccount.email,
       role: savedAccount.role,
-      full_name: full_name
+      full_name: full_name,
+      phone_number: phone_number
     };
 
     if (userRole === ROLES.STUDENT) {

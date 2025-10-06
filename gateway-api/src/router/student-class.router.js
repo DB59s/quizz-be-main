@@ -1,7 +1,7 @@
 const express = require('express');
 const { verifyToken } = require('../middlewares/auth.middleware');
 const { requireRoleOnly } = require('../middlewares/gateway.middleware');
-const { registerClass, getStudentClasses, cancelRegistration, approveStudent, rejectStudent } = require('../controller/student-class.controller');
+const { registerClass, getStudentClasses, cancelRegistration, approveStudent, rejectStudent, removeStudent } = require('../controller/student-class.controller');
 
 const router = express.Router();
 
@@ -176,7 +176,7 @@ router.get('/student', verifyToken, requireRoleOnly(['student']), getStudentClas
 
 /**
  * @swagger
- * /api/v1/student-classes/{id}:
+ * /api/v1/student-classes/{registration_id}:
  *   delete:
  *     summary: Student cancels registration (only if pending)
  *     tags: [Student Classes]
@@ -219,11 +219,11 @@ router.get('/student', verifyToken, requireRoleOnly(['student']), getStudentClas
  *       500:
  *         description: Internal server error
  */
-router.delete('/:id', verifyToken, requireRoleOnly(['student']), cancelRegistration);
+router.delete('/:registration_id', verifyToken, requireRoleOnly(['student']), cancelRegistration);
 
 /**
  * @swagger
- * /api/v1/student-classes/{id}/approve:
+ * /api/v1/student-classes/{registration_id}/approve:
  *   patch:
  *     summary: Teacher approves student registration
  *     tags: [Student Classes]
@@ -290,11 +290,11 @@ router.delete('/:id', verifyToken, requireRoleOnly(['student']), cancelRegistrat
  *       500:
  *         description: Internal server error
  */
-router.patch('/:id/approve', verifyToken, requireRoleOnly(['teacher']), approveStudent);
+router.patch('/:registration_id/approve', verifyToken, requireRoleOnly(['teacher']), approveStudent);
 
 /**
  * @swagger
- * /api/v1/student-classes/{id}/reject:
+ * /api/v1/student-classes/{registration_id}/reject:
  *   patch:
  *     summary: Teacher rejects student registration
  *     tags: [Student Classes]
@@ -361,6 +361,78 @@ router.patch('/:id/approve', verifyToken, requireRoleOnly(['teacher']), approveS
  *       500:
  *         description: Internal server error
  */
-router.patch('/:id/reject', verifyToken, requireRoleOnly(['teacher']), rejectStudent);
+router.patch('/:registration_id/reject', verifyToken, requireRoleOnly(['teacher']), rejectStudent);
+
+
+/**
+ * @swagger
+ * /api/v1/student-classes/{registration_id}/remove:
+ *   delete:
+ *     summary: Teacher removes student from class
+ *     tags: [Student Classes]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Registration ID
+ *     responses:
+ *       200:
+ *         description: Student removed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Student removed successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     _id:
+ *                       type: string
+ *                     student_id:
+ *                       type: string
+ *                     class_id:
+ *                       type: object
+ *                       properties:
+ *                         _id:
+ *                           type: string
+ *                         teacher_id:
+ *                           type: string
+ *                         name:
+ *                           type: string
+ *                         max_students:
+ *                           type: integer
+ *                         current_students:
+ *                           type: integer
+ *                     status:
+ *                       type: string
+ *                       example: "removed"
+ *                     created_at:
+ *                       type: string
+ *                       format: date-time
+ *                     updated_at:
+ *                       type: string
+ *                       format: date-time
+ *       400:
+ *         description: Bad request - Already removed
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - Not authorized (teacher_id mismatch)
+ *       404:
+ *         description: Registration or class not found
+ *       500:
+ *         description: Internal server error
+ */
+router.delete('/:registration_id/remove', verifyToken, requireRoleOnly(['teacher']), removeStudent);
 
 module.exports = router;

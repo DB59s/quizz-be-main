@@ -292,6 +292,8 @@ const getClassDetails = async (req, res) => {
     // Find the class
     const classData = await Class.findById(class_id);
 
+    console.log(classData);
+
     if (!classData) {
       return res.status(404).json({
         success: false,

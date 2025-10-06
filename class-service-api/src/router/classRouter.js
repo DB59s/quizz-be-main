@@ -167,7 +167,7 @@ router.get('/:teacher_id', getClassesByTeacher);
 
 /**
  * @swagger
- * /api/v1/classes/{class_id}:
+ * /api/v1/classes/details/{class_id}:
  *   get:
  *     summary: Get class details
  *     tags: [Classes]
@@ -210,7 +210,7 @@ router.get('/:teacher_id', getClassesByTeacher);
  *       500:
  *         description: Server error
  */
-router.get('/:class_id', getClassDetails);
+router.get('/details/:class_id', getClassDetails);
 
 /**
  * @swagger

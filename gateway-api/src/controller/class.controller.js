@@ -363,7 +363,7 @@ async function getClassDetails(req, res) {
 
     // Call class service to get class details
     try {
-      const response = await callClassService('GET', `/classes/${class_id}?teacher_id=${teacher_id}`);
+      const response = await callClassService('GET', `/classes/details/${class_id}?teacher_id=${teacher_id}`);
       
       console.log(`[Gateway] Class details retrieved successfully: ${class_id}`);
       

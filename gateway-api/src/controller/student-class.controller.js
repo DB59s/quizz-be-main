@@ -134,14 +134,14 @@ async function getStudentClasses(req, res) {
 
 /**
  * Student cancels registration (only if pending)
- * DELETE /api/v1/student-classes/:id
+ * DELETE /api/v1/student-classes/:registration_id
  */
 async function cancelRegistration(req, res) {
   try {
-    const { id } = req.params;
+    const { registration_id } = req.params;
 
     // Validate id
-    if (!id) {
+    if (!registration_id) {
       return res.status(400).json({
         success: false,
         error: 'Validation failed',
@@ -165,13 +165,13 @@ async function cancelRegistration(req, res) {
       student_id
     };
 
-    console.log(`[Gateway] Student ${student_id} cancelling registration: ${id}`);
+    console.log(`[Gateway] Student ${student_id} cancelling registration: ${registration_id}`);
 
     // Call class service to cancel registration
     try {
-      const response = await callClassService('DELETE', `/student-classes/${id}`, cancelData);
+      const response = await callClassService('DELETE', `/student-classes/${registration_id}`, cancelData);
       
-      console.log(`[Gateway] Registration cancelled successfully: ${id}`);
+      console.log(`[Gateway] Registration cancelled successfully: ${registration_id}`);
       
       // Return the response from class service
       return res.status(response.status).json(response.data);
@@ -201,14 +201,14 @@ async function cancelRegistration(req, res) {
 
 /**
  * Teacher approves student registration
- * PATCH /api/v1/student-classes/:id/approve
+ * PATCH /api/v1/student-classes/:registration_id/approve
  */
 async function approveStudent(req, res) {
   try {
-    const { id } = req.params;
+    const { registration_id } = req.params;
 
     // Validate id
-    if (!id) {
+    if (!registration_id) {
       return res.status(400).json({
         success: false,
         error: 'Validation failed',
@@ -232,13 +232,13 @@ async function approveStudent(req, res) {
       teacher_id
     };
 
-    console.log(`[Gateway] Teacher ${teacher_id} approving student registration: ${id}`);
+    console.log(`[Gateway] Teacher ${teacher_id} approving student registration: ${registration_id}`);
 
     // Call class service to approve student
     try {
-      const response = await callClassService('PATCH', `/student-classes/${id}/approve`, approveData);
+      const response = await callClassService('PATCH', `/student-classes/${registration_id}/approve`, approveData);
       
-      console.log(`[Gateway] Student approved successfully: ${id}`);
+      console.log(`[Gateway] Student approved successfully: ${registration_id}`);
       
       // Return the response from class service
       return res.status(response.status).json(response.data);
@@ -268,14 +268,14 @@ async function approveStudent(req, res) {
 
 /**
  * Teacher rejects student registration
- * PATCH /api/v1/student-classes/:id/reject
+ * PATCH /api/v1/student-classes/:registration_id/reject
  */
 async function rejectStudent(req, res) {
   try {
-    const { id } = req.params;
+    const { registration_id } = req.params;
 
     // Validate id
-    if (!id) {
+    if (!registration_id) {
       return res.status(400).json({
         success: false,
         error: 'Validation failed',
@@ -299,13 +299,13 @@ async function rejectStudent(req, res) {
       teacher_id
     };
 
-    console.log(`[Gateway] Teacher ${teacher_id} rejecting student registration: ${id}`);
+    console.log(`[Gateway] Teacher ${teacher_id} rejecting student registration: ${registration_id}`);
 
     // Call class service to reject student
     try {
-      const response = await callClassService('PATCH', `/student-classes/${id}/reject`, rejectData);
+      const response = await callClassService('PATCH', `/student-classes/${registration_id}/reject`, rejectData);
       
-      console.log(`[Gateway] Student rejected successfully: ${id}`);
+      console.log(`[Gateway] Student rejected successfully: ${registration_id}`);
       
       // Return the response from class service
       return res.status(response.status).json(response.data);
@@ -333,11 +333,79 @@ async function rejectStudent(req, res) {
   }
 }
 
+/**
+ * Teacher removes student from class
+ * DELETE /api/v1/student-classes/:registration_id/remove
+ */
+async function removeStudent(req, res) {
+  try {
+    const { registration_id } = req.params;
+
+    // Validate id
+    if (!registration_id) {
+      return res.status(400).json({
+        success: false,
+        error: 'Validation failed',
+        message: 'Registration ID is required'
+      });
+    }
+
+    // Get teacher_id from token (set by verifyToken middleware)
+    const teacher_id = req.user?.teacher_id;
+
+    if (!teacher_id) {
+      return res.status(403).json({
+        success: false,
+        error: 'Forbidden',
+        message: 'Only teachers can remove students'
+      });
+    }
+
+    // Prepare request body for class service
+    const removeData = {
+      teacher_id
+    };
+
+    console.log(`[Gateway] Teacher ${teacher_id} removing student from class: ${registration_id}`);
+
+    // Call class service to remove student
+    try {
+      const response = await callClassService('DELETE', `/student-classes/${registration_id}/remove`, removeData);
+      
+      console.log(`[Gateway] Student removed successfully: ${registration_id}`);
+      
+      // Return the response from class service
+      return res.status(response.status).json(response.data);
+      
+    } catch (serviceError) {
+      console.error(`[Gateway] Failed to remove student:`, serviceError.message);
+      
+      // Return error from class service
+      return res.status(serviceError.statusCode || 500).json(
+        serviceError.response || {
+          success: false,
+          error: 'Removal failed',
+          message: serviceError.message || 'Failed to remove student. Please try again.'
+        }
+      );
+    }
+
+  } catch (error) {
+    console.error('[Gateway] Unexpected error in removeStudent:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Internal Server Error',
+      message: 'An unexpected error occurred'
+    });
+  }
+}
+
 module.exports = {
   registerClass,
   getStudentClasses,
   cancelRegistration,
   approveStudent,
   rejectStudent,
+  removeStudent,
   callClassService
 };
