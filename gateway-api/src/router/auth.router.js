@@ -26,8 +26,8 @@ const router = express.Router();
  *     tags: [Authentication]
  *     description: |
  *       Register a new account with role-based validation:
- *       - **Student**: Requires email, password, full_name, student_code. Account is activated immediately.
- *       - **Teacher**: Requires email, password, full_name, department, university. Account status is pending and requires admin approval.
+ *       - **Student**: Requires email, password, full_name, student_code, phone_number. Account is activated immediately.
+ *       - **Teacher**: Requires email, password, full_name, department, university, phone_number. Account status is pending and requires admin approval.
  *     requestBody:
  *       required: true
  *       content:
@@ -41,6 +41,7 @@ const router = express.Router();
  *                   - password
  *                   - full_name
  *                   - student_code
+ *                   - phone_number
  *                 properties:
  *                   email:
  *                     type: string
@@ -69,6 +70,8 @@ const router = express.Router();
  *                   - role
  *                   - full_name
  *                   - department
+ *                   - university
+ *                   - phone_number
  *                 properties:
  *                   email:
  *                     type: string
