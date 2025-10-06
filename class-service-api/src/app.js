@@ -2,6 +2,7 @@ const express = require('express');
 const { corsMiddleware } = require('./config');
 const { errorHandler } = require('./middleware');
 const apiRouter = require('./router');
+const { swaggerUi, swaggerSpec } = require('./config/swagger');
 
 // Create Express application
 const app = express();
@@ -17,16 +18,22 @@ app.use((req, res, next) => {
   next();
 });
 
+// Swagger documentation
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: 'Class Service API Documentation'
+}));
+
 // Mount API routes
-app.use('/api', apiRouter);
+app.use('/api/v1', apiRouter);
 
 // Root endpoint
 app.get('/', (req, res) => {
   res.status(200).json({
     success: true,
-    message: 'Base Backend Server',
+    message: 'Class Service API',
     version: '1.0.0',
-    documentation: '/api'
+    documentation: '/api-docs'
   });
 });
 

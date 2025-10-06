@@ -48,7 +48,8 @@ app.get('/', (req, res) => {
       health: '/api/v1/health',
       auth: '/api/v1/auth',
       users: '/api/v1/users',
-      admin: '/api/v1/admin'
+      admin: '/api/v1/admin',
+      classes: '/api/v1/classes'
     }
   });
 });
