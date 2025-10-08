@@ -80,6 +80,25 @@ class SubjectController {
       });
     } catch (error) {
       console.error('Error in createSubject:', error);
+      
+      // Handle duplicate name error
+      if (error.code === 'DUPLICATE_NAME') {
+        return res.status(409).json({
+          success: false,
+          message: 'Subject name already exists',
+          data: null
+        });
+      }
+
+      // Handle database duplicate error (fallback)
+      if (error.code === 'ER_DUP_ENTRY' || error.code === '23505') {
+        return res.status(409).json({
+          success: false,
+          message: 'Subject name already exists',
+          data: null
+        });
+      }
+
       return res.status(500).json({
         success: false,
         message: 'Failed to create subject',
