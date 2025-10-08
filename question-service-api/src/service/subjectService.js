@@ -6,6 +6,24 @@ const Subject = require('../entity/Subject');
  */
 class SubjectService {
   /**
+   * Check if subject name already exists
+   * @param {string} name - Subject name
+   * @returns {Promise<boolean>} True if exists
+   */
+  async isNameExists(name) {
+    try {
+      const subjectRepository = AppDataSource.getRepository('Subject');
+      const subject = await subjectRepository.findOne({
+        where: { name }
+      });
+      return !!subject;
+    } catch (error) {
+      console.error('Error checking subject name:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Create a new subject
    * @param {Object} subjectData - Subject data
    * @returns {Promise<Object>} Created subject
@@ -14,6 +32,14 @@ class SubjectService {
     try {
       const subjectRepository = AppDataSource.getRepository('Subject');
       
+      // Check if name already exists
+      const exists = await this.isNameExists(subjectData.name);
+      if (exists) {
+        const error = new Error('Subject name already exists');
+        error.code = 'DUPLICATE_NAME';
+        throw error;
+      }
+
       // Create new subject
       const subject = subjectRepository.create({
         name: subjectData.name
