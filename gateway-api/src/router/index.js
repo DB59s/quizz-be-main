@@ -4,6 +4,8 @@ const userRouter = require('./user.router');
 const adminRouter = require('./admin.router');
 const classRouter = require('./class.router');
 const studentClassRouter = require('./student-class.router');
+const subjectRouter = require('./subject.router');
+const questionRouter = require('./question.router');
 
 const router = express.Router();
 
@@ -20,6 +22,8 @@ router.use('/users', userRouter);
 router.use('/admin', adminRouter);
 router.use('/classes', classRouter);
 router.use('/student-classes', studentClassRouter);
+router.use('/subjects', subjectRouter);
+router.use('/questions', questionRouter);
 
 /**
  * @swagger
@@ -105,6 +109,8 @@ router.get('/', (req, res) => {
       admin: '/api/v1/admin',
       classes: '/api/v1/classes',
       studentClasses: '/api/v1/student-classes',
+      subjects: '/api/v1/subjects',
+      questions: '/api/v1/questions',
       docs: '/api-docs'
     }
   });
