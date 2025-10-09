@@ -7,7 +7,7 @@ class QuestionController {
   /**
    * Create a new question
    * @swagger
-   * /api/questions:
+   * /api/v1/questions:
    *   post:
    *     summary: Create a new question with answers and subject associations
    *     tags: [Questions]
@@ -295,7 +295,7 @@ class QuestionController {
   /**
    * Get questions for a teacher
    * @swagger
-   * /api/questions:
+   * /api/v1/questions:
    *   get:
    *     summary: Get list of questions created by the teacher
    *     tags: [Questions]
@@ -423,7 +423,7 @@ class QuestionController {
   /**
    * Get question by ID
    * @swagger
-   * /api/questions/{id}:
+   * /api/v1/questions/{id}:
    *   get:
    *     summary: Get question details by ID
    *     tags: [Questions]
@@ -501,7 +501,7 @@ class QuestionController {
   /**
    * Update question
    * @swagger
-   * /api/questions/{id}:
+   * /api/v1/questions/{id}:
    *   patch:
    *     summary: Update a question
    *     tags: [Questions]
@@ -642,7 +642,7 @@ class QuestionController {
   /**
    * Delete question
    * @swagger
-   * /api/questions/{id}:
+   * /api/v1/questions/{id}:
    *   delete:
    *     summary: Delete a question
    *     tags: [Questions]

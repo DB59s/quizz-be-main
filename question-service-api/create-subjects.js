@@ -1,5 +1,8 @@
 const { DataSource } = require('typeorm');
 const Subject = require('./src/entity/Subject');
+const Question = require('./src/entity/Question');
+const SubjectQuestion = require('./src/entity/SubjectQuestion');
+const Answer = require('./src/entity/Answer');
 
 // Database configuration from environment variables
 const AppDataSource = new DataSource({
@@ -11,7 +14,7 @@ const AppDataSource = new DataSource({
   database: process.env.DB_DATABASE || 'question_db',
   synchronize: false,
   logging: false,
-  entities: [Subject],
+  entities: [Subject, Question, SubjectQuestion, Answer],
 });
 
 // List of subjects to create
