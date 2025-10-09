@@ -176,7 +176,7 @@ router.get('/student', verifyToken, requireRoleOnly(['student']), getStudentClas
 
 /**
  * @swagger
- * /api/v1/student-classes/{registration_id}:
+ * /api/v1/student-classes/{_id}:
  *   delete:
  *     summary: Student cancels registration (only if pending)
  *     tags: [Student Classes]
@@ -219,11 +219,11 @@ router.get('/student', verifyToken, requireRoleOnly(['student']), getStudentClas
  *       500:
  *         description: Internal server error
  */
-router.delete('/:registration_id', verifyToken, requireRoleOnly(['student']), cancelRegistration);
+router.delete('/:_id', verifyToken, requireRoleOnly(['student']), cancelRegistration);
 
 /**
  * @swagger
- * /api/v1/student-classes/{registration_id}/approve:
+ * /api/v1/student-classes/{_id}/approve:
  *   patch:
  *     summary: Teacher approves student registration
  *     tags: [Student Classes]
@@ -290,11 +290,11 @@ router.delete('/:registration_id', verifyToken, requireRoleOnly(['student']), ca
  *       500:
  *         description: Internal server error
  */
-router.patch('/:registration_id/approve', verifyToken, requireRoleOnly(['teacher']), approveStudent);
+router.patch('/:_id/approve', verifyToken, requireRoleOnly(['teacher']), approveStudent);
 
 /**
  * @swagger
- * /api/v1/student-classes/{registration_id}/reject:
+ * /api/v1/student-classes/{_id}/reject:
  *   patch:
  *     summary: Teacher rejects student registration
  *     tags: [Student Classes]
@@ -361,12 +361,12 @@ router.patch('/:registration_id/approve', verifyToken, requireRoleOnly(['teacher
  *       500:
  *         description: Internal server error
  */
-router.patch('/:registration_id/reject', verifyToken, requireRoleOnly(['teacher']), rejectStudent);
+router.patch('/:_id/reject', verifyToken, requireRoleOnly(['teacher']), rejectStudent);
 
 
 /**
  * @swagger
- * /api/v1/student-classes/{registration_id}/remove:
+ * /api/v1/student-classes/{_id}/remove:
  *   delete:
  *     summary: Teacher removes student from class
  *     tags: [Student Classes]
@@ -433,6 +433,6 @@ router.patch('/:registration_id/reject', verifyToken, requireRoleOnly(['teacher'
  *       500:
  *         description: Internal server error
  */
-router.delete('/:registration_id/remove', verifyToken, requireRoleOnly(['teacher']), removeStudent);
+router.delete('/:_id/remove', verifyToken, requireRoleOnly(['teacher']), removeStudent);
 
 module.exports = router;
