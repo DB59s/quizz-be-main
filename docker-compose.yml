@@ -226,31 +226,6 @@ services:
       - quiz_network
     command: ["node", "create-admin.js"]
 
-  # Subject Setup - Create all subjects after question service is ready
-  subject-setup:
-    build:
-      context: ./question-service-api
-      dockerfile: Dockerfile
-    container_name: quiz_subject_setup
-    restart: "no"
-    depends_on:
-      question-service-api:
-        condition: service_healthy
-    environment:
-      NODE_ENV: production
-      # Database configuration for MySQL
-      DB_TYPE: mysql
-      DB_HOST: quiz_mysql_question
-      DB_PORT: 3306
-      DB_USERNAME: question_user
-      DB_PASSWORD: question_password
-      DB_DATABASE: question_db
-      DB_SYNCHRONIZE: "false"
-      DB_LOGGING: "false"
-    networks:
-      - quiz_network
-    command: ["node", "create-subjects.js"]
-
 # Named volumes for data persistence
 volumes:
   mysql_gateway_data:

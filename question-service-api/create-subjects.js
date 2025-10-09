@@ -8,9 +8,9 @@ const Answer = require('./src/entity/Answer');
 const AppDataSource = new DataSource({
   type: process.env.DB_TYPE || 'mysql',
   host: process.env.DB_HOST || 'localhost',
-  port: parseInt(process.env.DB_PORT) || 3306,
-  username: process.env.DB_USERNAME || 'root',
-  password: process.env.DB_PASSWORD || 'password',
+  port: parseInt(process.env.DB_PORT) || 3308,
+  username: process.env.DB_USERNAME || 'question_user',
+  password: process.env.DB_PASSWORD || 'question_password',
   database: process.env.DB_DATABASE || 'question_db',
   synchronize: false,
   logging: false,
