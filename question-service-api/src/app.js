@@ -25,7 +25,7 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
 }));
 
 // Mount API routes
-app.use('/api', apiRouter);
+app.use('/api/v1', apiRouter);
 
 // Root endpoint
 app.get('/', (req, res) => {
