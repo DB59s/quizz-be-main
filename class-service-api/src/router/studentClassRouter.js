@@ -80,7 +80,7 @@ router.get('/:student_id', getStudentClasses);
 
 /**
  * @swagger
- * /api/v1/student-classes/{id}:
+ * /api/v1/student-classes/{_id}:
  *   delete:
  *     summary: Student cancels registration (only if pending)
  *     tags: [Student Classes]
@@ -88,11 +88,11 @@ router.get('/:student_id', getStudentClasses);
  *       - BearerAuth: []
  *     parameters:
  *       - in: path
- *         name: id
+ *         name: _id
  *         required: true
  *         schema:
  *           type: string
- *         description: Registration ID
+ *         description: Registration _id
  *     requestBody:
  *       required: true
  *       content:
@@ -116,11 +116,11 @@ router.get('/:student_id', getStudentClasses);
  *       500:
  *         description: Server error
  */
-router.delete('/:id', cancelRegistration);
+router.delete('/:_id', cancelRegistration);
 
 /**
  * @swagger
- * /api/v1/student-classes/{id}/approve:
+ * /api/v1/student-classes/{_id}/approve:
  *   patch:
  *     summary: Teacher approves student registration
  *     tags: [Student Classes]
@@ -128,11 +128,11 @@ router.delete('/:id', cancelRegistration);
  *       - BearerAuth: []
  *     parameters:
  *       - in: path
- *         name: id
+ *         name: _id
  *         required: true
  *         schema:
  *           type: string
- *         description: Registration ID
+ *         description: Registration _id
  *     requestBody:
  *       required: true
  *       content:
@@ -156,11 +156,11 @@ router.delete('/:id', cancelRegistration);
  *       500:
  *         description: Server error
  */
-router.patch('/:id/approve', approveStudent);
+router.patch('/:_id/approve', approveStudent);
 
 /**
  * @swagger
- * /api/v1/student-classes/{id}/reject:
+ * /api/v1/student-classes/{_id}/reject:
  *   patch:
  *     summary: Teacher rejects student registration
  *     tags: [Student Classes]
@@ -168,11 +168,11 @@ router.patch('/:id/approve', approveStudent);
  *       - BearerAuth: []
  *     parameters:
  *       - in: path
- *         name: id
+ *         name: _id
  *         required: true
  *         schema:
  *           type: string
- *         description: Registration ID
+ *         description: Registration _id
  *     requestBody:
  *       required: true
  *       content:
@@ -196,11 +196,11 @@ router.patch('/:id/approve', approveStudent);
  *       500:
  *         description: Server error
  */
-router.patch('/:id/reject', rejectStudent);
+router.patch('/:_id/reject', rejectStudent);
 
 /**
  * @swagger
- * /api/v1/student-classes/{id}/remove:
+ * /api/v1/student-classes/{_id}/remove:
  *   delete:
  *     summary: Teacher removes approved student from class
  *     tags: [Student Classes]
@@ -208,11 +208,11 @@ router.patch('/:id/reject', rejectStudent);
  *       - BearerAuth: []
  *     parameters:
  *       - in: path
- *         name: id
+ *         name: _id
  *         required: true
  *         schema:
  *           type: string
- *         description: Registration ID
+ *         description: Registration _id
  *     requestBody:
  *       required: true
  *       content:
@@ -236,6 +236,6 @@ router.patch('/:id/reject', rejectStudent);
  *       500:
  *         description: Server error
  */
-router.delete('/:id/remove', removeStudent);
+router.delete('/:_id/remove', removeStudent);
 
 module.exports = router;

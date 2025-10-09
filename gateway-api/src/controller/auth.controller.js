@@ -308,6 +308,7 @@ async function login(req, res) {
       
       if (userData) {
         userId = userData._id
+        userName = userData.full_name
       }
     } catch (serviceError) {
       console.error(`Failed to get user info from user service:`, serviceError.message);
@@ -359,7 +360,8 @@ async function login(req, res) {
         id: account.id,
         email: account.email,
         role: account.role,
-        user_id: userId
+        user_id: userId,
+        full_name: userName
       }
     });
 
