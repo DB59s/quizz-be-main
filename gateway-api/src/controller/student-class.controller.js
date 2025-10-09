@@ -201,7 +201,7 @@ async function cancelRegistration(req, res) {
 
 /**
  * Teacher approves student registration
- * PATCH /api/v1/student-classes/:registration_id/approve
+ * PATCH /api/v1/student-classes/:_id/approve
  */
 async function approveStudent(req, res) {
   try {
@@ -268,7 +268,7 @@ async function approveStudent(req, res) {
 
 /**
  * Teacher rejects student registration
- * PATCH /api/v1/student-classes/:registration_id/reject
+ * PATCH /api/v1/student-classes/:_id/reject
  */
 async function rejectStudent(req, res) {
   try {
@@ -335,7 +335,7 @@ async function rejectStudent(req, res) {
 
 /**
  * Teacher removes student from class
- * DELETE /api/v1/student-classes/:registration_id/remove
+ * DELETE /api/v1/student-classes/:_id/remove
  */
 async function removeStudent(req, res) {
   try {
