@@ -138,10 +138,10 @@ async function getStudentClasses(req, res) {
  */
 async function cancelRegistration(req, res) {
   try {
-    const { registration_id } = req.params;
+    const { _id } = req.params;
 
     // Validate id
-    if (!registration_id) {
+    if (!_id) {
       return res.status(400).json({
         success: false,
         error: 'Validation failed',
@@ -149,7 +149,7 @@ async function cancelRegistration(req, res) {
       });
     }
 
-    // Get student_id from token (set by verifyToken middleware)
+    // Get student_id from token (set by verifyToken midd eware)
     const student_id = req.user?.student_id;
 
     if (!student_id) {
@@ -165,13 +165,13 @@ async function cancelRegistration(req, res) {
       student_id
     };
 
-    console.log(`[Gateway] Student ${student_id} cancelling registration: ${registration_id}`);
+    console.log(`[Gateway] Student ${student_id} cancelling registration: ${_id}`);
 
     // Call class service to cancel registration
     try {
-      const response = await callClassService('DELETE', `/student-classes/${registration_id}`, cancelData);
+      const response = await callClassService('DELETE', `/student-classes/${_id}`, cancelData);
       
-      console.log(`[Gateway] Registration cancelled successfully: ${registration_id}`);
+      console.log(`[Gateway] Registration cancelled successfully: ${_id}`);
       
       // Return the response from class service
       return res.status(response.status).json(response.data);
@@ -205,10 +205,10 @@ async function cancelRegistration(req, res) {
  */
 async function approveStudent(req, res) {
   try {
-    const { registration_id } = req.params;
+    const { _id } = req.params;
 
     // Validate id
-    if (!registration_id) {
+    if (!_id) {
       return res.status(400).json({
         success: false,
         error: 'Validation failed',
@@ -216,7 +216,7 @@ async function approveStudent(req, res) {
       });
     }
 
-    // Get teacher_id from token (set by verifyToken middleware)
+    // Get teacher_id from token (set by verifyToken middeware)
     const teacher_id = req.user?.teacher_id;
 
     if (!teacher_id) {
@@ -228,17 +228,17 @@ async function approveStudent(req, res) {
     }
 
     // Prepare request body for class service
-    const approveData = {
+    const approveData = { 
       teacher_id
     };
 
-    console.log(`[Gateway] Teacher ${teacher_id} approving student registration: ${registration_id}`);
+    console.log(`[Gateway] Teacher ${teacher_id} approving student registration: ${_id}`);
 
     // Call class service to approve student
     try {
-      const response = await callClassService('PATCH', `/student-classes/${registration_id}/approve`, approveData);
+      const response = await callClassService('PATCH', `/student-classes/${_id}/approve`, approveData);
       
-      console.log(`[Gateway] Student approved successfully: ${registration_id}`);
+      console.log(`[Gateway] Student approved successfully: ${_id}`);
       
       // Return the response from class service
       return res.status(response.status).json(response.data);
@@ -272,10 +272,10 @@ async function approveStudent(req, res) {
  */
 async function rejectStudent(req, res) {
   try {
-    const { registration_id } = req.params;
+    const { _id } = req.params;
 
     // Validate id
-    if (!registration_id) {
+    if (!_id) {
       return res.status(400).json({
         success: false,
         error: 'Validation failed',
@@ -299,13 +299,13 @@ async function rejectStudent(req, res) {
       teacher_id
     };
 
-    console.log(`[Gateway] Teacher ${teacher_id} rejecting student registration: ${registration_id}`);
+    console.log(`[Gateway] Teacher ${teacher_id} rejecting student registration: ${_id}`);
 
     // Call class service to reject student
     try {
-      const response = await callClassService('PATCH', `/student-classes/${registration_id}/reject`, rejectData);
+      const response = await callClassService('PATCH', `/student-classes/${_id}/reject`, rejectData);
       
-      console.log(`[Gateway] Student rejected successfully: ${registration_id}`);
+      console.log(`[Gateway] Student rejected successfully: ${_id}`);
       
       // Return the response from class service
       return res.status(response.status).json(response.data);
@@ -339,10 +339,10 @@ async function rejectStudent(req, res) {
  */
 async function removeStudent(req, res) {
   try {
-    const { registration_id } = req.params;
+    const { _id } = req.params;
 
     // Validate id
-    if (!registration_id) {
+    if (!_id) {
       return res.status(400).json({
         success: false,
         error: 'Validation failed',
@@ -366,13 +366,13 @@ async function removeStudent(req, res) {
       teacher_id
     };
 
-    console.log(`[Gateway] Teacher ${teacher_id} removing student from class: ${registration_id}`);
+    console.log(`[Gateway] Teacher ${teacher_id} removing student from class: ${_id}`);
 
     // Call class service to remove student
     try {
-      const response = await callClassService('DELETE', `/student-classes/${registration_id}/remove`, removeData);
+      const response = await callClassService('DELETE', `/student-classes/${_id}/remove`, removeData);
       
-      console.log(`[Gateway] Student removed successfully: ${registration_id}`);
+      console.log(`[Gateway] Student removed successfully: ${_id}`);
       
       // Return the response from class service
       return res.status(response.status).json(response.data);

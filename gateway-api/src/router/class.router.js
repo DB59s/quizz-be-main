@@ -302,7 +302,7 @@ router.get('/teachers', verifyToken, requireRoleOnly(['teacher']), getTeacherCla
 
 /**
  * @swagger
- * /api/v1/classes/{class_id}:
+ * /api/v1/classes/details/{class_id}:
  *   get:
  *     summary: Get class details (Teacher only)
  *     tags: [Classes]
