@@ -14,11 +14,11 @@ const options = {
     },
     servers: [
       {
-        url: `http://localhost:9008`,
+        url: `http://localhost:9000`,
         description: 'Development server'
       },
       {
-        url: 'http://localhost:9008',
+        url: 'http://localhost:9000',
         description: 'Docker development server'
       }
     ],

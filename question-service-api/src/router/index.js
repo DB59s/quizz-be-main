@@ -1,11 +1,13 @@
 const express = require('express');
 const subjectRouter = require('./subjectRouter');
+const questionRouter = require('./questionRouter');
 const authMiddleware = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
 // Mount routers with middleware
 router.use('/subjects', authMiddleware, subjectRouter);
+router.use('/questions', authMiddleware, questionRouter);
 
 // Health check endpoint
 router.get('/health', (req, res) => {
@@ -24,7 +26,8 @@ router.get('/', (req, res) => {
     version: '1.0.0',
     endpoints: {
       health: '/api/health',
-      subjects: '/api/subjects'
+      subjects: '/api/subjects',
+      questions: '/api/questions'
     }
   });
 });
