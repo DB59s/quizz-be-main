@@ -7,7 +7,7 @@ class SubjectController {
   /**
    * Create a new subject
    * @swagger
-   * /api/subjects:
+   * /api/v1/subjects:
    *   post:
    *     summary: Create a new subject
    *     tags: [Subjects]
@@ -110,7 +110,7 @@ class SubjectController {
   /**
    * Get all subjects with pagination and search
    * @swagger
-   * /api/subjects:
+   * /api/v1/subjects:
    *   get:
    *     summary: Get all subjects with pagination and search
    *     tags: [Subjects]
@@ -189,7 +189,7 @@ class SubjectController {
   /**
    * Get subject by ID
    * @swagger
-   * /api/subjects/{id}:
+   * /api/v1/subjects/{id}:
    *   get:
    *     summary: Get subject by ID
    *     tags: [Subjects]
@@ -247,7 +247,7 @@ class SubjectController {
   /**
    * Update subject
    * @swagger
-   * /api/subjects/{id}:
+   * /api/v1/subjects/{id}:
    *   patch:
    *     summary: Update subject name
    *     tags: [Subjects]
@@ -343,7 +343,7 @@ class SubjectController {
   /**
    * Delete subject
    * @swagger
-   * /api/subjects/{id}:
+   * /api/v1/subjects/{id}:
    *   delete:
    *     summary: Delete subject
    *     tags: [Subjects]
