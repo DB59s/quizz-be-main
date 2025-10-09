@@ -184,11 +184,11 @@ router.get('/student', verifyToken, requireRoleOnly(['student']), getStudentClas
  *       - BearerAuth: []
  *     parameters:
  *       - in: path
- *         name: id
+ *         name: _id
  *         required: true
  *         schema:
  *           type: string
- *         description: Registration ID
+ *         description: Registration _id
  *     responses:
  *       200:
  *         description: Registration cancelled successfully
@@ -206,10 +206,10 @@ router.get('/student', verifyToken, requireRoleOnly(['student']), getStudentClas
  *                 data:
  *                   type: object
  *                   properties:
- *                     registration_id:
+ *                     _id:
  *                       type: string
  *       400:
- *         description: Bad request - Invalid registration_id or cannot cancel (not pending)
+ *         description: Bad request - Invalid _id or cannot cancel (not pending)
  *       401:
  *         description: Unauthorized
  *       403:
@@ -231,11 +231,11 @@ router.delete('/:_id', verifyToken, requireRoleOnly(['student']), cancelRegistra
  *       - BearerAuth: []
  *     parameters:
  *       - in: path
- *         name: id
+ *         name: _id
  *         required: true
  *         schema:
  *           type: string
- *         description: Registration ID
+ *         description: Registration _id
  *     responses:
  *       200:
  *         description: Student approved successfully
@@ -302,11 +302,11 @@ router.patch('/:_id/approve', verifyToken, requireRoleOnly(['teacher']), approve
  *       - BearerAuth: []
  *     parameters:
  *       - in: path
- *         name: id
+ *         name: _id
  *         required: true
  *         schema:
  *           type: string
- *         description: Registration ID
+ *         description: Registration _id
  *     responses:
  *       200:
  *         description: Student rejected successfully
@@ -374,11 +374,11 @@ router.patch('/:_id/reject', verifyToken, requireRoleOnly(['teacher']), rejectSt
  *       - BearerAuth: []
  *     parameters:
  *       - in: path
- *         name: id
+ *         name: _id
  *         required: true
  *         schema:
  *           type: string
- *         description: Registration ID
+ *         description: Registration _id
  *     responses:
  *       200:
  *         description: Student removed successfully
