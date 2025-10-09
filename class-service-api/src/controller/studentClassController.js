@@ -166,11 +166,11 @@ const getStudentClasses = async (req, res) => {
 
 /**
  * Student cancels registration (only if pending)
- * DELETE /api/student-classes/:id
+ * DELETE /api/student-classes/:registration_id
  */
 const cancelRegistration = async (req, res) => {
   try {
-    const { id } = req.params;
+    const { registration_id } = req.params;
     const { student_id } = req.body;
 
     // Validate student_id is provided
@@ -183,7 +183,7 @@ const cancelRegistration = async (req, res) => {
     }
 
     // Find the registration
-    const registration = await StudentClass.findById(id);
+    const registration = await StudentClass.findById(registration_id);
 
     if (!registration) {
       return res.status(404).json({
@@ -212,12 +212,12 @@ const cancelRegistration = async (req, res) => {
     }
 
     // Delete the registration
-    await StudentClass.findByIdAndDelete(id);
+    await StudentClass.findByIdAndDelete(registration_id);
 
     return res.status(200).json({
       success: true,
       message: 'Registration cancelled successfully',
-      data: { registration_id: id }
+      data: { registration_id: registration_id }
     });
   } catch (error) {
     console.error('Cancel registration error:', error);
@@ -241,11 +241,11 @@ const cancelRegistration = async (req, res) => {
 
 /**
  * Teacher approves student registration
- * PATCH /api/student-classes/:id/approve
+ * PATCH /api/student-classes/:registration_id/approve
  */
 const approveStudent = async (req, res) => {
   try {
-    const { id } = req.params;
+    const { registration_id } = req.params;
     const { teacher_id } = req.body;
 
     // Validate teacher_id is provided
@@ -258,7 +258,7 @@ const approveStudent = async (req, res) => {
     }
 
     // Find the registration
-    const registration = await StudentClass.findById(id).populate('class_id');
+    const registration = await StudentClass.findById(registration_id).populate('class_id');
 
     if (!registration) {
       return res.status(404).json({
@@ -347,11 +347,11 @@ const approveStudent = async (req, res) => {
 
 /**
  * Teacher rejects student registration
- * PATCH /api/student-classes/:id/reject
+ * PATCH /api/student-classes/:registration_id/reject
  */
 const rejectStudent = async (req, res) => {
   try {
-    const { id } = req.params;
+    const { registration_id } = req.params;
     const { teacher_id } = req.body;
 
     // Validate teacher_id is provided
@@ -364,7 +364,7 @@ const rejectStudent = async (req, res) => {
     }
 
     // Find the registration
-    const registration = await StudentClass.findById(id).populate('class_id');
+    const registration = await StudentClass.findById(registration_id).populate('class_id');
 
     if (!registration) {
       return res.status(404).json({
@@ -441,11 +441,11 @@ const rejectStudent = async (req, res) => {
 
 /**
  * Teacher removes approved student from class
- * DELETE /api/student-classes/:id/remove
+ * DELETE /api/student-classes/:registration_id/remove
  */
 const removeStudent = async (req, res) => {
   try {
-    const { id } = req.params;
+    const { registration_id } = req.params;
     const { teacher_id } = req.body;
 
     // Validate teacher_id is provided
@@ -458,7 +458,7 @@ const removeStudent = async (req, res) => {
     }
 
     // Find the registration
-    const registration = await StudentClass.findById(id).populate('class_id');
+    const registration = await StudentClass.findById(registration_id).populate('class_id');
 
     if (!registration) {
       return res.status(404).json({
@@ -496,7 +496,7 @@ const removeStudent = async (req, res) => {
     }
 
     // Delete the registration
-    await StudentClass.findByIdAndDelete(id);
+    await StudentClass.findByIdAndDelete(registration_id);
 
     // Decrease current_students count
     await Class.findByIdAndUpdate(
@@ -507,7 +507,7 @@ const removeStudent = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: 'Student removed from class successfully',
-      data: { registration_id: id }
+      data: { registration_id: registration_id }
     });
   } catch (error) {
     console.error('Remove student error:', error);
