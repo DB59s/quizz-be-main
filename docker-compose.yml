@@ -74,7 +74,7 @@ services:
       DB_LOGGING: "false"
       # JWT configuration
       JWT_SECRET: your-super-secret-jwt-key-change-this-in-production
-      JWT_EXPIRES_IN: 15m
+      JWT_EXPIRES_IN: 180m
       REFRESH_TOKEN_EXPIRES_DAYS: 7
       # API Gateway configuration
       USER_SERVICE_BASEURL: http://user-service-api:9004/api/v1
@@ -91,6 +91,13 @@ services:
       FRONTEND_URL: https://api.vuquangduy.io.vn
       # Production domain for Swagger
       PRODUCTION_DOMAIN: api.vuquangduy.io.vn
+      # OTP Configuration
+      OTP_EXPIRES_MINUTES: 5
+      # Email Configuration (Gmail SMTP)
+      EMAIL_USER: vuduy050903@gmail.com
+      EMAIL_PASS: zanp rxvy bvln dhmd
+      EMAIL_HOST: smtp.gmail.com
+      EMAIL_PORT: 587
     ports:
       - "9008:9008"
     networks:

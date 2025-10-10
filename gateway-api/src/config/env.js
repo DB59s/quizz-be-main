@@ -28,11 +28,10 @@ module.exports = {
   // Google OAuth configuration
   GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || '',
   GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET || '',
-  
+
   // URL configuration for OAuth callbacks
   API_BASE_URL: process.env.API_BASE_URL || 'http://localhost:8080',
   FRONTEND_URL: process.env.FRONTEND_URL || 'http://localhost:8080',
-  FRONTEND_PATH: process.env.FRONTEND_PATH || '/front-end/index.html',
 
   // Service URLs
   USER_SERVICE_BASEURL: process.env.USER_SERVICE_BASEURL || 'http://localhost:3001',

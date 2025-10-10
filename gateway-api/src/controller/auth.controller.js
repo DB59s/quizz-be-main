@@ -10,11 +10,10 @@ const { googleAuthService, emailService, otpService } = require('../service');
 const { callUserService } = require('../middlewares/gateway.middleware');
 const { google } = require('googleapis');
 const { 
-  GOOGLE_CLIENT_ID, 
-  GOOGLE_CLIENT_SECRET,
   API_BASE_URL,
-  FRONTEND_URL,
-  FRONTEND_PATH
+  GOOGLE_CLIENT_ID,
+  GOOGLE_CLIENT_SECRET,
+  FRONTEND_URL
 } = require('../config/env');
 const { ROLES, ACCOUNT_STATUS } = require('../utils/constants');
 
@@ -24,6 +23,9 @@ const getCallbackUrl = () => {
 };
 
 console.log("API_BASE_URL là: ", API_BASE_URL);
+console.log("GOOGLE_CLIENT_ID là: ", GOOGLE_CLIENT_ID);
+console.log("GOOGLE_CLIENT_SECRET là: ", GOOGLE_CLIENT_SECRET);
+console.log("FRONTEND_URL là: ", FRONTEND_URL);
 
 const oauth2Client = new google.auth.OAuth2(
   GOOGLE_CLIENT_ID,
@@ -450,11 +452,13 @@ async function refresh(req, res) {
     let userId = null;
     try {
       console.log(account)
-      const userResponse = await callUserService('GET', `/${account.role}s/${account.id}`);
+      const userResponse = await callUserService('GET', `/${account.role}/${account.id}`);
       const userData = userResponse?.data?.data;
+
+      console.log(userData)
       
       if (userData) {
-        userId = account.role === ROLES.STUDENT ? userData.student_id : userData.teacher_id;
+        userId = account.role === ROLES.STUDENT ? userData._id : userData._id;
       }
     } catch (serviceError) {
       console.error(`Failed to get user info from user service during refresh:`, serviceError.message);
@@ -660,11 +664,11 @@ async function googleLogin(req, res) {
     // Get user info from user service to retrieve student_id or teacher_id
     let userId = null;
     try {
-      const userResponse = await callUserService('GET', `/${account.role}s/${account.id}`);
+      const userResponse = await callUserService('GET', `/${account.role}/${account.id}`);
       const userData = userResponse?.data?.data;
       
       if (userData) {
-        userId = account.role === ROLES.STUDENT ? userData.student_id : userData.teacher_id;
+        userId = userData._id;
       }
     } catch (serviceError) {
       console.error(`Failed to get user info from user service for Google login:`, serviceError.message);
@@ -785,11 +789,11 @@ async function googleCallback(req, res) {
       }
       
       googleUser = {
-        google_id: data.id,
-        email: data.email,
-        name: data.name,
-        picture: data.picture,
-        verified_email: data.verified_email
+        google_id: data?.id,
+        email: data?.email,
+        name: data?.name,
+        picture: data?.picture,
+        verified_email: data?.verified_email
       };
     } catch (error) {
       console.error('User info fetch error:', error);
@@ -870,11 +874,11 @@ async function googleCallback(req, res) {
     // Get user info from user service to retrieve student_id or teacher_id
     let userId = null;
     try {
-      const userResponse = await callUserService('GET', `/${account.role}s/${account.id}`);
+      const userResponse = await callUserService('GET', `/${account.role}/${account.id}`);
       const userData = userResponse?.data?.data;
       
       if (userData) {
-        userId = account.role === ROLES.STUDENT ? userData.student_id : userData.teacher_id;
+        userId = userData._id;
       }
     } catch (serviceError) {
       console.error(`Failed to get user info from user service for Google callback:`, serviceError.message);
@@ -897,7 +901,8 @@ async function googleCallback(req, res) {
     const tokenPayload = {
       account_id: account.id,
       role: account.role,
-      user_id: userId
+      user_id: userId,
+      full_name: googleUser.name || '',
     };
 
     const accessToken = generateAccessToken(tokenPayload);
@@ -917,7 +922,7 @@ async function googleCallback(req, res) {
     console.log(`Google callback login successful: ${account.email} with user_id: ${userId}`);
 
     
-    const redirectUrl = `https://vuquangduy.online`;
+    const redirectUrl = `${FRONTEND_URL}/auth/callback#accessToken=${encodeURIComponent(accessToken)}&refreshToken=${encodeURIComponent(refreshTokenRaw)}&userId=${userId}`;
     
     res.redirect(redirectUrl);
 
