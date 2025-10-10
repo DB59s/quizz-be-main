@@ -81,6 +81,8 @@ services:
       USER_SERVICE_API_TOKEN: 45f65we46f5ew465few465we46fwe46f4ew65f46w5e4f65we4f65ew46few465f
       CLASS_SERVICE_BASEURL: http://class-service-api:9007/api/v1
       CLASS_SERVICE_API_TOKEN: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2NvdW50X2lkIjoiZTAxZWQ0NTItODk5Zi00ZWE0LWIwZDEtMjNhZWE2Yzk5NjBkIiwicm9sZSI6InN0dWRlbnQiLCJ1c2VyX2lkIjoiNjhkZjk4OTNjZDA1Yzk2MjgyNGU4NTI0IiwiaWF0IjoxNzU5NTQ0ODQ4LCJleHAiOjE3NTk1NDU3NDgsImF1ZCI6ImFwaS11c2VycyIsImlzcyI6ImF1dGgtc2VydmljZSJ9.y-fbcJPEyZTzWTohMT_XotUnRoejWSa0aOFz-NY00JY
+      QUESTION_SERVICE_BASEURL: http://question-service-api:9009/api/v1
+      QUESTION_SERVICE_API_TOKEN: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
       # Google configuration
       GOOGLE_CLIENT_ID: 70714368044-ggb9g17lp5vtr6elo9gtrkvvpq9hgflb.apps.googleusercontent.com
       GOOGLE_CLIENT_SECRET: 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
@@ -189,6 +191,7 @@ services:
       DB_DATABASE: question_db
       DB_SYNCHRONIZE: "true"
       DB_LOGGING: "false"
+      API_TOKEN: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
     ports:
       - "9009:9009"
     networks:
@@ -229,31 +232,6 @@ services:
     networks:
       - quiz_network
     command: ["node", "create-admin.js"]
-
-  # Subject Setup - Create all subjects after question service is ready
-  subject-setup:
-    build:
-      context: ./question-service-api
-      dockerfile: Dockerfile
-    container_name: quiz_subject_setup
-    restart: "no"
-    depends_on:
-      question-service-api:
-        condition: service_healthy
-    environment:
-      NODE_ENV: production
-      # Database configuration for MySQL
-      DB_TYPE: mysql
-      DB_HOST: quiz_mysql_question
-      DB_PORT: 3306
-      DB_USERNAME: question_user
-      DB_PASSWORD: question_password
-      DB_DATABASE: question_db
-      DB_SYNCHRONIZE: "false"
-      DB_LOGGING: "false"
-    networks:
-      - quiz_network
-    command: ["node", "create-subjects.js"]
 
 # Named volumes for data persistence
 volumes:
