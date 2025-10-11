@@ -227,15 +227,16 @@ class QuestionService {
   }
 
   /**
-   * Get question by ID with answers
+   * Get question by ID with answers and subjects
    * @param {string} question_id - Question ID
    * @param {string} teacher_id - Teacher ID for authorization
-   * @returns {Promise<Object>} Question with answers
+   * @returns {Promise<Object>} Question with answers and subjects
    */
   async getQuestionById(question_id, teacher_id) {
     try {
       const questionRepository = AppDataSource.getRepository('Question');
       const answerRepository = AppDataSource.getRepository('Answer');
+      const subjectQuestionRepository = AppDataSource.getRepository('SubjectQuestion');
 
       // Get question
       const question = await questionRepository.findOne({
@@ -260,6 +261,12 @@ class QuestionService {
         where: { question_id }
       });
 
+      // Get subject associations
+      const subjectQuestions = await subjectQuestionRepository.find({
+        where: { question_id }
+      });
+      const subject_ids = subjectQuestions.map(sq => sq.subject_id);
+
       return {
         id: question.id,
         content: question.content,
@@ -272,7 +279,8 @@ class QuestionService {
           id: a.id,
           content: a.content,
           is_true: a.is_true
-        }))
+        })),
+        subject_ids
       };
     } catch (error) {
       console.error('Error getting question by ID:', error);
@@ -285,6 +293,7 @@ class QuestionService {
    * @param {string} question_id - Question ID
    * @param {string} teacher_id - Teacher ID for authorization
    * @param {Object} updateData - Data to update
+   * @param {Array<string>} updateData.subject_ids - Optional: Array of subject IDs to update
    * @returns {Promise<Object>} Updated question
    */
   async updateQuestion(question_id, teacher_id, updateData) {
@@ -295,6 +304,7 @@ class QuestionService {
     try {
       const questionRepository = queryRunner.manager.getRepository('Question');
       const answerRepository = queryRunner.manager.getRepository('Answer');
+      const subjectQuestionRepository = queryRunner.manager.getRepository('SubjectQuestion');
 
       // Get question
       const question = await questionRepository.findOne({
@@ -378,10 +388,43 @@ class QuestionService {
         }
       }
 
+      // Update subject associations if provided
+      if (updateData.subject_ids && Array.isArray(updateData.subject_ids)) {
+        // Validate subject_ids
+        if (updateData.subject_ids.length === 0) {
+          const error = new Error('Question must be associated with at least one subject');
+          error.code = 'NO_SUBJECTS';
+          throw error;
+        }
+
+        // Verify all subjects exist
+        const subjectRepository = queryRunner.manager.getRepository('Subject');
+        for (const subjectId of updateData.subject_ids) {
+          const subject = await subjectRepository.findOne({ where: { id: subjectId } });
+          if (!subject) {
+            const error = new Error(`Subject with ID ${subjectId} not found`);
+            error.code = 'SUBJECT_NOT_FOUND';
+            throw error;
+          }
+        }
+
+        // Delete old subject associations
+        await subjectQuestionRepository.delete({ question_id });
+
+        // Create new subject associations
+        for (const subjectId of updateData.subject_ids) {
+          const subjectQuestion = subjectQuestionRepository.create({
+            subject_id: subjectId,
+            question_id
+          });
+          await subjectQuestionRepository.save(subjectQuestion);
+        }
+      }
+
       // Commit transaction
       await queryRunner.commitTransaction();
 
-      // Get updated question with answers
+      // Get updated question with answers and subjects
       const updatedQuestion = await this.getQuestionById(question_id, teacher_id);
       return updatedQuestion;
     } catch (error) {
@@ -398,10 +441,17 @@ class QuestionService {
    * @param {string} question_id - Question ID
    * @param {string} teacher_id - Teacher ID for authorization
    * @returns {Promise<void>}
+   * @description Deletes question and all related records (answers and subject_questions) via cascade delete
    */
   async deleteQuestion(question_id, teacher_id) {
+    const queryRunner = AppDataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
     try {
-      const questionRepository = AppDataSource.getRepository('Question');
+      const questionRepository = queryRunner.manager.getRepository('Question');
+      const subjectQuestionRepository = queryRunner.manager.getRepository('SubjectQuestion');
+      const answerRepository = queryRunner.manager.getRepository('Answer');
 
       // Get question
       const question = await questionRepository.findOne({
@@ -421,11 +471,24 @@ class QuestionService {
         throw error;
       }
 
-      // Delete question (cascade will delete answers and subject_questions)
+      // Explicitly delete related records to ensure cleanup
+      // Delete subject-question associations
+      await subjectQuestionRepository.delete({ question_id });
+      
+      // Delete answers
+      await answerRepository.delete({ question_id });
+
+      // Delete question
       await questionRepository.remove(question);
+
+      // Commit transaction
+      await queryRunner.commitTransaction();
     } catch (error) {
+      await queryRunner.rollbackTransaction();
       console.error('Error deleting question:', error);
       throw error;
+    } finally {
+      await queryRunner.release();
     }
   }
 }
