@@ -47,6 +47,29 @@ services:
       interval: 3s
       start_period: 45s
 
+  # PostgreSQL Database for Quiz Service API
+  quiz_postgres_quiz:
+    image: postgres:15
+    container_name: quiz_postgres_quiz
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: quiz_user
+      POSTGRES_PASSWORD: quiz_password
+      POSTGRES_DB: quiz_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_quiz_data:/var/lib/postgresql/data
+      - ./postgres-init/03-quiz-init.sql:/docker-entrypoint-initdb.d/03-quiz-init.sql
+    networks:
+      - quiz_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U quiz_user -d quiz_db"]
+      timeout: 5s
+      retries: 20
+      interval: 3s
+      start_period: 45s
+
   # MongoDB Atlas is used instead of local container
   # No local MongoDB needed since we use cloud MongoDB Atlas
 
@@ -203,6 +226,40 @@ services:
       start_period: 30s
       interval: 30s
 
+  # Quiz Service API
+  quiz-service-api:
+    build:
+      context: ./quiz-service-api
+      dockerfile: Dockerfile
+    container_name: quiz_quiz_service_api
+    restart: unless-stopped
+    depends_on:
+      quiz_postgres_quiz:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 9010
+      # Database configuration for PostgreSQL
+      DB_TYPE: postgres
+      DB_HOST: quiz_postgres_quiz
+      DB_PORT: 5432
+      DB_USERNAME: quiz_user
+      DB_PASSWORD: quiz_password
+      DB_DATABASE: quiz_db
+      DB_SYNCHRONIZE: "true"
+      DB_LOGGING: "false"
+      API_TOKEN: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.quiz_service_token
+    ports:
+      - "9010:9010"
+    networks:
+      - quiz_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9010/api/health"]
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+      interval: 30s
+
   # Admin Setup - Create admin account after all services are ready
   admin-setup:
     build:
@@ -238,6 +295,8 @@ volumes:
   mysql_gateway_data:
     driver: local
   mysql_question_data:
+    driver: local
+  postgres_quiz_data:
     driver: local
   # mongo_data removed since we use MongoDB Atlas
 
