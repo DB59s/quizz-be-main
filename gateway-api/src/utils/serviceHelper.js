@@ -23,17 +23,22 @@ async function callService({ serviceName, baseUrl, apiToken }, method, path, dat
 
   const url = `${baseUrl}${path}`;
   
+  // Separate headers from other options to prevent overwriting
+  const { headers: optionHeaders, ...otherOptions } = options;
+  
   const config = {
     method: method.toLowerCase(),
     url,
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${apiToken}`,
-      ...options.headers
+      ...optionHeaders
     },
-    timeout: options.timeout || 30000,
-    ...options
+    timeout: otherOptions.timeout || 30000,
+    ...otherOptions
   };
+
+  console.log(`[Gateway] Request headers:`, JSON.stringify(config.headers, null, 2));
 
   // Add data for POST, PUT, PATCH, DELETE requests
   if (['post', 'put', 'patch', 'delete'].includes(method.toLowerCase()) && data) {

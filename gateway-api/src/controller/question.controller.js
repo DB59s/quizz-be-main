@@ -1,6 +1,9 @@
 const { createServiceCaller } = require('../utils/serviceHelper');
 const { QUESTION_SERVICE_BASEURL, QUESTION_SERVICE_API_TOKEN } = require('../config/env');
 
+console.log('[Gateway] QUESTION_SERVICE_BASEURL:', QUESTION_SERVICE_BASEURL);
+console.log('[Gateway] QUESTION_SERVICE_API_TOKEN:', QUESTION_SERVICE_API_TOKEN);
+
 // Create a pre-configured caller for Question Service
 const callQuestionService = createServiceCaller(
   'Question Service',

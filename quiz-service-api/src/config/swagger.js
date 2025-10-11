@@ -1,6 +1,6 @@
 const swaggerJsdoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
-const { env } = require('./env');
+const env = require('./env');
 
 // Swagger definition
 const swaggerDefinition = {
