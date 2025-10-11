@@ -9,6 +9,9 @@ const authMiddleware = (req, res, next) => {
     // Get token from Authorization header
     const authHeader = req.headers.authorization;
     
+    console.log('[Question Service] Received headers:', JSON.stringify(req.headers, null, 2));
+    console.log('[Question Service] Expected API_TOKEN:', env.API_TOKEN);
+    
     if (!authHeader) {
       return res.status(401).json({
         success: false,
