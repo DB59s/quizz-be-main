@@ -19,7 +19,6 @@ class QuestionController {
    *         required: true
    *         schema:
    *           type: string
-   *           format: uuid
    *         description: Teacher ID from gateway authentication
    *     requestBody:
    *       required: true
@@ -51,7 +50,6 @@ class QuestionController {
    *                 type: array
    *                 items:
    *                   type: string
-   *                   format: uuid
    *                 example: ["uuid-mon-lich-su", "uuid-mon-van-hoc"]
    *               answers:
    *                 type: array
@@ -94,7 +92,6 @@ class QuestionController {
    *                   properties:
    *                     id:
    *                       type: string
-   *                       format: uuid
    *                     content:
    *                       type: string
    *                     level:
@@ -103,7 +100,6 @@ class QuestionController {
    *                       type: integer
    *                     teacher_id:
    *                       type: string
-   *                       format: uuid
    *                     created_at:
    *                       type: string
    *                       format: date-time
@@ -117,7 +113,6 @@ class QuestionController {
    *                         properties:
    *                           id:
    *                             type: string
-   *                             format: uuid
    *                           content:
    *                             type: string
    *                           is_true:
@@ -126,7 +121,6 @@ class QuestionController {
    *                       type: array
    *                       items:
    *                         type: string
-   *                         format: uuid
    *       400:
    *         description: Bad request - Invalid input data
    *       401:
@@ -307,7 +301,6 @@ class QuestionController {
    *         required: true
    *         schema:
    *           type: string
-   *           format: uuid
    *         description: Teacher ID from gateway authentication
    *       - in: query
    *         name: search
@@ -319,7 +312,6 @@ class QuestionController {
    *         name: subject_id
    *         schema:
    *           type: string
-   *           format: uuid
    *         description: Filter by subject ID
    *       - in: query
    *         name: level
@@ -354,7 +346,6 @@ class QuestionController {
    *                     properties:
    *                       id:
    *                         type: string
-   *                         format: uuid
    *                       content:
    *                         type: string
    *                       level:
@@ -363,7 +354,6 @@ class QuestionController {
    *                         type: integer
    *                       teacher_id:
    *                         type: string
-   *                         format: uuid
    *                       created_at:
    *                         type: string
    *                         format: date-time
@@ -435,14 +425,12 @@ class QuestionController {
    *         required: true
    *         schema:
    *           type: string
-   *           format: uuid
    *         description: Teacher ID from gateway authentication
    *       - in: path
    *         name: id
    *         required: true
    *         schema:
    *           type: string
-   *           format: uuid
    *         description: Question ID
    *     responses:
    *       200:
@@ -513,14 +501,12 @@ class QuestionController {
    *         required: true
    *         schema:
    *           type: string
-   *           format: uuid
    *         description: Teacher ID from gateway authentication
    *       - in: path
    *         name: id
    *         required: true
    *         schema:
    *           type: string
-   *           format: uuid
    *         description: Question ID
    *     requestBody:
    *       required: true
@@ -654,14 +640,12 @@ class QuestionController {
    *         required: true
    *         schema:
    *           type: string
-   *           format: uuid
    *         description: Teacher ID from gateway authentication
    *       - in: path
    *         name: id
    *         required: true
    *         schema:
    *           type: string
-   *           format: uuid
    *         description: Question ID
    *     responses:
    *       204:

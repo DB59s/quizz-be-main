@@ -37,11 +37,13 @@ module.exports = {
   USER_SERVICE_BASEURL: process.env.USER_SERVICE_BASEURL || 'http://localhost:3001',
   CLASS_SERVICE_BASEURL: process.env.CLASS_SERVICE_BASEURL || 'http://localhost:3002',
   QUESTION_SERVICE_BASEURL: process.env.QUESTION_SERVICE_BASEURL || 'http://localhost:3003',
+  QUIZ_SERVICE_BASEURL: process.env.QUIZ_SERVICE_BASEURL || 'http://localhost:9010/api/v1',
 
   // Service API Tokens
   USER_SERVICE_API_TOKEN: process.env.USER_SERVICE_API_TOKEN || 'user_service_secret_token_2024',
   CLASS_SERVICE_API_TOKEN: process.env.CLASS_SERVICE_API_TOKEN || 'your-secret-token-here-change-in-production',
   QUESTION_SERVICE_API_TOKEN: process.env.QUESTION_SERVICE_API_TOKEN || 'question_service_secret_token_2024',
+  QUIZ_SERVICE_API_TOKEN: process.env.QUIZ_SERVICE_API_TOKEN || 'quiz_service_secret_token_2024',
 
   // Email configuration
   EMAIL_USER: process.env.EMAIL_USER || 'vuduy050903@gmail.com',

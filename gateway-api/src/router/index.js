@@ -6,6 +6,7 @@ const classRouter = require('./class.router');
 const studentClassRouter = require('./student-class.router');
 const subjectRouter = require('./subject.router');
 const questionRouter = require('./question.router');
+const quizRouter = require('./quiz.router');
 
 const router = express.Router();
 
@@ -24,6 +25,7 @@ router.use('/classes', classRouter);
 router.use('/student-classes', studentClassRouter);
 router.use('/subjects', subjectRouter);
 router.use('/questions', questionRouter);
+router.use('/quizzes', quizRouter);
 
 /**
  * @swagger
@@ -111,6 +113,7 @@ router.get('/', (req, res) => {
       studentClasses: '/api/v1/student-classes',
       subjects: '/api/v1/subjects',
       questions: '/api/v1/questions',
+      quizzes: '/api/v1/quizzes',
       docs: '/api-docs'
     }
   });

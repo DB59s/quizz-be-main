@@ -17,6 +17,7 @@ const AppDataSource = new DataSource({
   entities: [Subject, Question, SubjectQuestion, Answer],
 });
 
+
 // List of subjects to create
 const subjects = [
   // Lý luận chính trị

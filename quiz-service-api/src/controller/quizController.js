@@ -1,4 +1,5 @@
 const quizService = require('../service/quizService');
+const serviceHelper = require('../utils/serviceHelper');
 
 /**
  * Controller for Quiz operations
@@ -6,7 +7,7 @@ const quizService = require('../service/quizService');
 class QuizController {
   /**
    * @swagger
-   * /api/quizzes:
+   * /quizzes:
    *   post:
    *     summary: Create a new quiz
    *     tags: [Quiz]
@@ -17,12 +18,6 @@ class QuizController {
    *         schema:
    *           type: string
    *         description: Teacher ID
-   *       - in: header
-   *         name: x-api-token
-   *         required: true
-   *         schema:
-   *           type: string
-   *         description: API authentication token
    *     requestBody:
    *       required: true
    *       content:
@@ -122,18 +117,13 @@ class QuizController {
 
   /**
    * @swagger
-   * /api/quizzes:
+   * /quizzes:
    *   get:
    *     summary: Get all quizzes for a teacher
    *     tags: [Quiz]
    *     parameters:
    *       - in: header
    *         name: x-teacher-id
-   *         required: true
-   *         schema:
-   *           type: string
-   *       - in: header
-   *         name: x-api-token
    *         required: true
    *         schema:
    *           type: string
@@ -186,7 +176,7 @@ class QuizController {
 
   /**
    * @swagger
-   * /api/quizzes/{id}:
+   * /quizzes/{id}:
    *   get:
    *     summary: Get quiz by ID
    *     tags: [Quiz]
@@ -198,11 +188,6 @@ class QuizController {
    *           type: string
    *       - in: header
    *         name: x-teacher-id
-   *         required: true
-   *         schema:
-   *           type: string
-   *       - in: header
-   *         name: x-api-token
    *         required: true
    *         schema:
    *           type: string
@@ -259,7 +244,7 @@ class QuizController {
 
   /**
    * @swagger
-   * /api/quizzes/{id}:
+   * /quizzes/{id}:
    *   put:
    *     summary: Update quiz
    *     tags: [Quiz]
@@ -271,11 +256,6 @@ class QuizController {
    *           type: string
    *       - in: header
    *         name: x-teacher-id
-   *         required: true
-   *         schema:
-   *           type: string
-   *       - in: header
-   *         name: x-api-token
    *         required: true
    *         schema:
    *           type: string
@@ -352,7 +332,7 @@ class QuizController {
 
   /**
    * @swagger
-   * /api/quizzes/{id}:
+   * /quizzes/{id}:
    *   delete:
    *     summary: Delete quiz
    *     tags: [Quiz]
@@ -364,11 +344,6 @@ class QuizController {
    *           type: string
    *       - in: header
    *         name: x-teacher-id
-   *         required: true
-   *         schema:
-   *           type: string
-   *       - in: header
-   *         name: x-api-token
    *         required: true
    *         schema:
    *           type: string

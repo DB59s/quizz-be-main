@@ -1,4 +1,5 @@
-const { AppDataSource } = require('../config');
+const { AppDataSource, env } = require('../config');
+const { createServiceCaller } = require('../utils/serviceHelper');
 
 /**
  * Service for Quiz operations
@@ -176,6 +177,41 @@ class QuizService {
       });
       const question_ids = quizQuestions.map(qq => qq.question_id);
 
+      // Fetch full question details from question service
+      let questions = [];
+      if (question_ids.length > 0) {
+        const questionServiceCaller = createServiceCaller(
+          'QuestionService',
+          env.QUESTION_SERVICE_BASE_URL,
+          env.QUESTION_SERVICE_API_TOKEN
+        );
+
+        // Fetch each question detail
+        const questionPromises = question_ids.map(async (questionId) => {
+          try {
+            const response = await questionServiceCaller(
+              'GET',
+              `/questions/${questionId}`,
+              null,
+              {
+                headers: {
+                  'X-Teacher-ID': teacher_id
+                }
+              }
+            );
+            return response.data;
+          } catch (error) {
+            console.error(`Failed to fetch question ${questionId}:`, error.message);
+            // Return null for failed questions instead of breaking the entire request
+            return null;
+          }
+        });
+
+        const questionResults = await Promise.all(questionPromises);
+        // Filter out null values (failed requests)
+        questions = questionResults.filter(q => q !== null);
+      }
+
       return {
         id: quiz.id,
         name: quiz.name,
@@ -183,7 +219,7 @@ class QuizService {
         teacher_id: quiz.teacher_id,
         created_at: quiz.created_at,
         updated_at: quiz.updated_at,
-        question_ids
+        questions
       };
     } catch (error) {
       console.error('Error getting quiz by ID:', error);

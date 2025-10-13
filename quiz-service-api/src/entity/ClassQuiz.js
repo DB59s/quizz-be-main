@@ -18,7 +18,8 @@ module.exports = new EntitySchema({
       nullable: false,
     },
     class_id: {
-      type: 'uuid',
+      type: 'varchar',
+      length: 255,
       nullable: false,
     },
     quizz_id: {
