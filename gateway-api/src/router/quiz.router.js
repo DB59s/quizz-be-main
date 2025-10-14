@@ -6,7 +6,8 @@ const {
   getQuizzes, 
   getQuizById, 
   updateQuiz, 
-  deleteQuiz 
+  deleteQuiz,
+  getQuizForStudent
 } = require('../controller/quiz.controller');
 
 const router = express.Router();
@@ -380,5 +381,102 @@ router.put('/:id', verifyToken, requireRoleOnly(['teacher']), updateQuiz);
  *         description: Internal server error
  */
 router.delete('/:id', verifyToken, requireRoleOnly(['teacher']), deleteQuiz);
+
+/**
+ * @swagger
+ * /api/v1/quizzes/{id}/student:
+ *   get:
+ *     summary: Get quiz for student with authorization check (Student only)
+ *     tags: [Quizzes]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Quiz ID
+ *         example: 550e8400-e29b-41d4-a716-446655440000
+ *     responses:
+ *       200:
+ *         description: Quiz details with questions for student
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Quiz retrieved successfully
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                       format: uuid
+ *                     name:
+ *                       type: string
+ *                     description:
+ *                       type: string
+ *                     teacher_id:
+ *                       type: string
+ *                       format: uuid
+ *                     class_id:
+ *                       type: string
+ *                     start_time:
+ *                       type: string
+ *                       format: date-time
+ *                     end_time:
+ *                       type: string
+ *                       format: date-time
+ *                     created_at:
+ *                       type: string
+ *                       format: date-time
+ *                     updated_at:
+ *                       type: string
+ *                       format: date-time
+ *                     questions:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                             format: uuid
+ *                           content:
+ *                             type: string
+ *                           level:
+ *                             type: integer
+ *                           type:
+ *                             type: integer
+ *                           answers:
+ *                             type: array
+ *                             items:
+ *                               type: object
+ *                               properties:
+ *                                 id:
+ *                                   type: string
+ *                                   format: uuid
+ *                                 content:
+ *                                   type: string
+ *                                 is_true:
+ *                                   type: boolean
+ *       400:
+ *         description: Bad request - Invalid ID
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - Student not in class or quiz not available
+ *       404:
+ *         description: Quiz not found or not assigned to any class
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/:id/student', verifyToken, requireRoleOnly(['student']), getQuizForStudent);
 
 module.exports = router;

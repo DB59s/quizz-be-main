@@ -700,6 +700,55 @@ class QuestionController {
       });
     }
   }
+
+  /**
+   * Get question by ID for internal service calls (no teacher check)
+   * This endpoint is for other microservices to fetch question details
+   * @swagger
+   * /api/v1/questions/internal/{id}:
+   *   get:
+   *     summary: Get question details for internal service calls
+   *     tags: [Questions - Internal]
+   *     security:
+   *       - BearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: Question ID
+   *     responses:
+   *       200:
+   *         description: Question details with answers
+   *       404:
+   *         description: Question not found
+   */
+  async getQuestionByIdInternal(req, res) {
+    try {
+      const { id } = req.params;
+
+      const question = await questionService.getQuestionByIdInternal(id);
+
+      return res.status(200).json(question);
+    } catch (error) {
+      console.error('Error in getQuestionByIdInternal:', error);
+
+      if (error.code === 'NOT_FOUND') {
+        return res.status(404).json({
+          statusCode: 404,
+          message: error.message,
+          error: 'Not Found'
+        });
+      }
+
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to retrieve question',
+        data: null
+      });
+    }
+  }
 }
 
 module.exports = new QuestionController();

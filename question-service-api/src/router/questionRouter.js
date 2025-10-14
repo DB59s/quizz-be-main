@@ -28,4 +28,9 @@ router.patch('/:id', questionController.updateQuestion);
  */
 router.delete('/:id', questionController.deleteQuestion);
 
+/**
+ * GET /api/questions/internal/:id - Get question for internal service calls
+ */
+router.get('/internal/:id', questionController.getQuestionByIdInternal);
+
 module.exports = router;

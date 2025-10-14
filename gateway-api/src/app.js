@@ -52,7 +52,8 @@ app.get('/', (req, res) => {
       classes: '/api/v1/classes',
       subjects: '/api/v1/subjects',
       questions: '/api/v1/questions',
-      quizzes: '/api/v1/quizzes'
+      quizzes: '/api/v1/quizzes',
+      classQuizzes: '/api/v1/class-quizzes'
     }
   });
 });

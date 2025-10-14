@@ -404,11 +404,83 @@ async function deleteQuiz(req, res) {
   }
 }
 
+/**
+ * Get quiz for student (Student only)
+ * GET /api/v1/quizzes/:id/student
+ */
+async function getQuizForStudent(req, res) {
+  try {
+    const { id } = req.params;
+
+    // Get student_id from token
+    const student_id = req.user?.student_id;
+
+    if (!student_id) {
+      return res.status(403).json({
+        success: false,
+        error: 'Forbidden',
+        message: 'Only students can access quizzes'
+      });
+    }
+
+    // Validate id
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        error: 'Validation failed',
+        message: 'Quiz ID is required'
+      });
+    }
+
+    console.log(`[Gateway] Student ${student_id} getting quiz: ${id}`);
+
+    // Call quiz service with x-student-id header
+    try {
+      const response = await callQuizService(
+        'GET', 
+        `/quizzes/${id}/student`,
+        null,
+        {
+          headers: {
+            'x-student-id': student_id
+          }
+        }
+      );
+      
+      console.log(`[Gateway] Quiz retrieved successfully for student: ${student_id}`);
+      
+      // Return the response from quiz service
+      return res.status(response.status).json(response.data);
+      
+    } catch (serviceError) {
+      console.error(`[Gateway] Failed to get quiz for student:`, serviceError.message);
+      
+      // Return error from quiz service
+      return res.status(serviceError.statusCode || 500).json(
+        serviceError.response || {
+          success: false,
+          error: 'Failed to retrieve quiz',
+          message: serviceError.message || 'Failed to retrieve quiz. Please try again.'
+        }
+      );
+    }
+
+  } catch (error) {
+    console.error('[Gateway] Unexpected error in getQuizForStudent:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Internal Server Error',
+      message: 'An unexpected error occurred'
+    });
+  }
+}
+
 module.exports = {
   createQuiz,
   getQuizzes,
   getQuizById,
   updateQuiz,
   deleteQuiz,
+  getQuizForStudent,
   callQuizService
 };

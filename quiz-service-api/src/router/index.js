@@ -1,11 +1,13 @@
 const express = require('express');
 const quizRouter = require('./quizRouter');
+const classQuizRouter = require('./classQuizRouter');
 const authMiddleware = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
 // Mount all routers with authentication
 router.use('/quizzes', authMiddleware, quizRouter);
+router.use('/class-quizzes', authMiddleware, classQuizRouter);
 
 /**
  * @swagger
@@ -72,7 +74,8 @@ router.get('/', (req, res) => {
     version: '1.0.0',
     endpoints: {
       health: '/api/health',
-      quizzes: '/api/quizzes'
+      quizzes: '/api/quizzes',
+      classQuizzes: '/api/class-quizzes'
     }
   });
 });

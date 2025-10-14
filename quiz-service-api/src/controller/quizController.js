@@ -394,6 +394,99 @@ class QuizController {
       });
     }
   }
+
+  /**
+   * @swagger
+   * /quizzes/{id}/student:
+   *   get:
+   *     summary: Get quiz for student with authorization
+   *     tags: [Quiz]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *       - in: header
+   *         name: x-student-id
+   *         required: true
+   *         schema:
+   *           type: string
+   *     responses:
+   *       200:
+   *         description: Quiz details with questions
+   *       403:
+   *         description: Not authorized
+   *       404:
+   *         description: Quiz not found
+   */
+  async getQuizForStudent(req, res) {
+    try {
+      const student_id = req.headers['x-student-id'];
+
+      if (!student_id) {
+        return res.status(401).json({
+          success: false,
+          message: 'Student ID is required in header (x-student-id)'
+        });
+      }
+
+      const { id } = req.params;
+
+      const quiz = await quizService.getQuizForStudent(id, student_id);
+
+      return res.status(200).json({
+        success: true,
+        message: 'Quiz retrieved successfully',
+        data: quiz
+      });
+    } catch (error) {
+      console.error('Error in getQuizForStudent:', error);
+
+      if (error.code === 'NOT_FOUND') {
+        return res.status(404).json({
+          success: false,
+          message: error.message
+        });
+      }
+
+      if (error.code === 'NOT_ASSIGNED') {
+        return res.status(404).json({
+          success: false,
+          message: error.message
+        });
+      }
+
+      if (error.code === 'FORBIDDEN') {
+        return res.status(403).json({
+          success: false,
+          message: error.message
+        });
+      }
+
+      if (error.code === 'NOT_STARTED') {
+        return res.status(403).json({
+          success: false,
+          message: error.message,
+          start_time: error.start_time
+        });
+      }
+
+      if (error.code === 'ENDED') {
+        return res.status(403).json({
+          success: false,
+          message: error.message,
+          end_time: error.end_time
+        });
+      }
+
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to retrieve quiz',
+        error: error.message
+      });
+    }
+  }
 }
 
 module.exports = new QuizController();
