@@ -1,5 +1,6 @@
 const swaggerJsdoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
+const path = require('path');
 
 const options = {
   definition: {
@@ -393,10 +394,19 @@ const options = {
       }
     }
   },
-  apis: ['./src/router/*.js'], // Path to the API docs
+  apis: [
+    path.join(__dirname, '..', 'router', '*.js')
+  ] // Path to the API docs
 };
 
+// Log the actual paths being scanned
+const routerPath = path.join(__dirname, '..', 'router', '*.js');
+console.log('Swagger scanning router files at:', routerPath);
+
 const specs = swaggerJsdoc(options);
+
+// Log number of paths found
+console.log('Swagger specs generated with', Object.keys(specs.paths || {}).length, 'endpoints');
 
 module.exports = {
   specs,
