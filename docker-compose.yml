@@ -83,8 +83,8 @@ services:
     depends_on:
       quiz_mysql_gateway:
         condition: service_healthy
-    volumes:
-      - ./gateway-api/src:/app/src
+    # volumes:
+    #   - ./gateway-api/src:/app/src
     environment:
       NODE_ENV: production
       PORT: 9008
@@ -143,8 +143,8 @@ services:
       dockerfile: Dockerfile
     container_name: quiz_user_service_api
     restart: unless-stopped
-    volumes:
-      - ./user-service-api/src:/app/src
+    # volumes:
+    #   - ./user-service-api/src:/app/src
     environment:
       NODE_ENV: production
       PORT: 9004
@@ -172,8 +172,8 @@ services:
       dockerfile: Dockerfile
     container_name: quiz_class_service_api
     restart: unless-stopped
-    volumes:
-      - ./class-service-api/src:/app/src
+    # volumes:
+    #   - ./class-service-api/src:/app/src
     environment:
       NODE_ENV: production
       PORT: 9007
@@ -210,8 +210,8 @@ services:
     depends_on:
       quiz_mysql_question:
         condition: service_healthy
-    volumes:
-      - ./question-service-api/src:/app/src
+    # volumes:
+    #   - ./question-service-api/src:/app/src
     environment:
       NODE_ENV: production
       PORT: 9009
@@ -246,8 +246,8 @@ services:
     depends_on:
       quiz_postgres_quiz:
         condition: service_healthy
-    volumes:
-      - ./quiz-service-api/src:/app/src
+    # volumes:
+    #   - ./quiz-service-api/src:/app/src
     environment:
       NODE_ENV: production
       PORT: 9010
