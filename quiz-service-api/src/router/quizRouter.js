@@ -28,4 +28,9 @@ router.put('/:id', quizController.updateQuiz);
  */
 router.delete('/:id', quizController.deleteQuiz);
 
+/**
+ * GET /api/quizzes/:id/student - Get quiz for student
+ */
+router.get('/:id/student', quizController.getQuizForStudent);
+
 module.exports = router;

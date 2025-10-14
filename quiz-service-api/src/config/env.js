@@ -21,5 +21,14 @@ module.exports = {
   DB_LOGGING: process.env.DB_LOGGING === 'true' || false,
   
   // API Authentication
-  API_TOKEN: process.env.API_TOKEN || 'default_dev_token_please_change'
+  API_TOKEN: process.env.API_TOKEN || 'default_dev_token_please_change',
+  
+  // Question Service configuration
+  QUESTION_SERVICE_BASE_URL: process.env.QUESTION_SERVICE_BASE_URL,
+  QUESTION_SERVICE_API_TOKEN: process.env.QUESTION_SERVICE_API_TOKEN,
+  
+  // Class Service configuration
+  CLASS_SERVICE_BASE_URL: process.env.CLASS_SERVICE_BASE_URL,
+  CLASS_SERVICE_API_TOKEN: process.env.CLASS_SERVICE_API_TOKEN
 };
+

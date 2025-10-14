@@ -5,7 +5,8 @@ const {
   cancelRegistration,
   approveStudent,
   rejectStudent,
-  removeStudent
+  removeStudent,
+  checkStudentInClass
 } = require('../controller/studentClassController');
 
 const router = express.Router();
@@ -237,5 +238,60 @@ router.patch('/:_id/reject', rejectStudent);
  *         description: Server error
  */
 router.delete('/:_id/remove', removeStudent);
+
+/**
+ * @swagger
+ * /api/v1/student-classes/check/{student_id}/{class_id}:
+ *   get:
+ *     summary: Check if student is approved in a class
+ *     tags: [Student Classes]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: student_id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Student ID
+ *       - in: path
+ *         name: class_id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Class ID
+ *     responses:
+ *       200:
+ *         description: Student is approved in this class
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     is_in_class:
+ *                       type: boolean
+ *                     student_id:
+ *                       type: string
+ *                     class_id:
+ *                       type: string
+ *                     registration_id:
+ *                       type: string
+ *                     approved_at:
+ *                       type: string
+ *                       format: date-time
+ *       404:
+ *         description: Student is not approved in this class
+ *       500:
+ *         description: Server error
+ */
+router.get('/check/:student_id/:class_id', checkStudentInClass);
 
 module.exports = router;

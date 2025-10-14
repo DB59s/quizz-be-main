@@ -528,11 +528,70 @@ const removeStudent = async (req, res) => {
   }
 };
 
+/**
+ * Check if student is in a class (approved status)
+ * GET /api/student-classes/check/:student_id/:class_id
+ */
+const checkStudentInClass = async (req, res) => {
+  try {
+    const { student_id, class_id } = req.params;
+
+    // Validate required fields
+    if (!student_id || !class_id) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required parameters: student_id, class_id',
+        data: null
+      });
+    }
+
+    // Find registration with approved status
+    const registration = await StudentClass.findOne({
+      student_id,
+      class_id,
+      status: STUDENT_CLASS_STATUS.APPROVED
+    });
+
+    if (!registration) {
+      return res.status(404).json({
+        success: false,
+        message: 'Student is not approved in this class',
+        data: {
+          is_in_class: false,
+          student_id,
+          class_id
+        }
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Student is approved in this class',
+      data: {
+        is_in_class: true,
+        student_id,
+        class_id,
+        registration_id: registration._id,
+        approved_at: registration.updated_at
+      }
+    });
+  } catch (error) {
+    console.error('Check student in class error:', error);
+
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to check student in class',
+      data: null
+    });
+  }
+};
+
 module.exports = {
   registerClass,
   getStudentClasses,
   cancelRegistration,
   approveStudent,
   rejectStudent,
-  removeStudent
+  removeStudent,
+  checkStudentInClass
 };

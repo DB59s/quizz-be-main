@@ -1,4 +1,5 @@
 const quizService = require('../service/quizService');
+const serviceHelper = require('../utils/serviceHelper');
 
 /**
  * Controller for Quiz operations
@@ -6,7 +7,7 @@ const quizService = require('../service/quizService');
 class QuizController {
   /**
    * @swagger
-   * /api/quizzes:
+   * /quizzes:
    *   post:
    *     summary: Create a new quiz
    *     tags: [Quiz]
@@ -17,12 +18,6 @@ class QuizController {
    *         schema:
    *           type: string
    *         description: Teacher ID
-   *       - in: header
-   *         name: x-api-token
-   *         required: true
-   *         schema:
-   *           type: string
-   *         description: API authentication token
    *     requestBody:
    *       required: true
    *       content:
@@ -122,18 +117,13 @@ class QuizController {
 
   /**
    * @swagger
-   * /api/quizzes:
+   * /quizzes:
    *   get:
    *     summary: Get all quizzes for a teacher
    *     tags: [Quiz]
    *     parameters:
    *       - in: header
    *         name: x-teacher-id
-   *         required: true
-   *         schema:
-   *           type: string
-   *       - in: header
-   *         name: x-api-token
    *         required: true
    *         schema:
    *           type: string
@@ -186,7 +176,7 @@ class QuizController {
 
   /**
    * @swagger
-   * /api/quizzes/{id}:
+   * /quizzes/{id}:
    *   get:
    *     summary: Get quiz by ID
    *     tags: [Quiz]
@@ -198,11 +188,6 @@ class QuizController {
    *           type: string
    *       - in: header
    *         name: x-teacher-id
-   *         required: true
-   *         schema:
-   *           type: string
-   *       - in: header
-   *         name: x-api-token
    *         required: true
    *         schema:
    *           type: string
@@ -259,7 +244,7 @@ class QuizController {
 
   /**
    * @swagger
-   * /api/quizzes/{id}:
+   * /quizzes/{id}:
    *   put:
    *     summary: Update quiz
    *     tags: [Quiz]
@@ -271,11 +256,6 @@ class QuizController {
    *           type: string
    *       - in: header
    *         name: x-teacher-id
-   *         required: true
-   *         schema:
-   *           type: string
-   *       - in: header
-   *         name: x-api-token
    *         required: true
    *         schema:
    *           type: string
@@ -352,7 +332,7 @@ class QuizController {
 
   /**
    * @swagger
-   * /api/quizzes/{id}:
+   * /quizzes/{id}:
    *   delete:
    *     summary: Delete quiz
    *     tags: [Quiz]
@@ -364,11 +344,6 @@ class QuizController {
    *           type: string
    *       - in: header
    *         name: x-teacher-id
-   *         required: true
-   *         schema:
-   *           type: string
-   *       - in: header
-   *         name: x-api-token
    *         required: true
    *         schema:
    *           type: string
@@ -415,6 +390,99 @@ class QuizController {
       return res.status(500).json({
         success: false,
         message: 'Failed to delete quiz',
+        error: error.message
+      });
+    }
+  }
+
+  /**
+   * @swagger
+   * /quizzes/{id}/student:
+   *   get:
+   *     summary: Get quiz for student with authorization
+   *     tags: [Quiz]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *       - in: header
+   *         name: x-student-id
+   *         required: true
+   *         schema:
+   *           type: string
+   *     responses:
+   *       200:
+   *         description: Quiz details with questions
+   *       403:
+   *         description: Not authorized
+   *       404:
+   *         description: Quiz not found
+   */
+  async getQuizForStudent(req, res) {
+    try {
+      const student_id = req.headers['x-student-id'];
+
+      if (!student_id) {
+        return res.status(401).json({
+          success: false,
+          message: 'Student ID is required in header (x-student-id)'
+        });
+      }
+
+      const { id } = req.params;
+
+      const quiz = await quizService.getQuizForStudent(id, student_id);
+
+      return res.status(200).json({
+        success: true,
+        message: 'Quiz retrieved successfully',
+        data: quiz
+      });
+    } catch (error) {
+      console.error('Error in getQuizForStudent:', error);
+
+      if (error.code === 'NOT_FOUND') {
+        return res.status(404).json({
+          success: false,
+          message: error.message
+        });
+      }
+
+      if (error.code === 'NOT_ASSIGNED') {
+        return res.status(404).json({
+          success: false,
+          message: error.message
+        });
+      }
+
+      if (error.code === 'FORBIDDEN') {
+        return res.status(403).json({
+          success: false,
+          message: error.message
+        });
+      }
+
+      if (error.code === 'NOT_STARTED') {
+        return res.status(403).json({
+          success: false,
+          message: error.message,
+          start_time: error.start_time
+        });
+      }
+
+      if (error.code === 'ENDED') {
+        return res.status(403).json({
+          success: false,
+          message: error.message,
+          end_time: error.end_time
+        });
+      }
+
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to retrieve quiz',
         error: error.message
       });
     }

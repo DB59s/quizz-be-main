@@ -19,7 +19,8 @@ module.exports = new EntitySchema({
       nullable: true,
     },
     teacher_id: {
-      type: 'uuid',
+      type: 'varchar',
+      length: 255,
       nullable: false,
     },
     created_at: {

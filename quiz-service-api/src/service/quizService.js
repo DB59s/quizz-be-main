@@ -1,4 +1,6 @@
-const { AppDataSource } = require('../config');
+const { AppDataSource, env } = require('../config');
+const { createServiceCaller } = require('../utils/serviceHelper');
+const { getQuizFromCache, setQuizToCache } = require('../utils/cacheHelper');
 
 /**
  * Service for Quiz operations
@@ -176,6 +178,36 @@ class QuizService {
       });
       const question_ids = quizQuestions.map(qq => qq.question_id);
 
+      // Fetch full question details from question service
+      let questions = [];
+      if (question_ids.length > 0) {
+        const questionServiceCaller = createServiceCaller(
+          'QuestionService',
+          env.QUESTION_SERVICE_BASE_URL,
+          env.QUESTION_SERVICE_API_TOKEN
+        );
+
+        // Fetch each question detail using internal API
+        const questionPromises = question_ids.map(async (questionId) => {
+          try {
+            const response = await questionServiceCaller(
+              'GET',
+              `/questions/internal/${questionId}`,
+              null
+            );
+            return response.data;
+          } catch (error) {
+            console.error(`Failed to fetch question ${questionId}:`, error.message);
+            // Return null for failed questions instead of breaking the entire request
+            return null;
+          }
+        });
+
+        const questionResults = await Promise.all(questionPromises);
+        // Filter out null values (failed requests)
+        questions = questionResults.filter(q => q !== null);
+      }
+
       return {
         id: quiz.id,
         name: quiz.name,
@@ -183,7 +215,7 @@ class QuizService {
         teacher_id: quiz.teacher_id,
         created_at: quiz.created_at,
         updated_at: quiz.updated_at,
-        question_ids
+        questions
       };
     } catch (error) {
       console.error('Error getting quiz by ID:', error);
@@ -326,6 +358,135 @@ class QuizService {
       throw error;
     } finally {
       await queryRunner.release();
+    }
+  }
+
+  /**
+   * Get quiz for student with authorization check
+   * @param {string} quiz_id - Quiz ID
+   * @param {string} student_id - Student ID for authorization
+   * @returns {Promise<Object>} Quiz with questions
+   */
+  async getQuizForStudent(quiz_id, student_id) {
+    try {
+      const quizRepository = AppDataSource.getRepository('Quiz');
+      const classQuizRepository = AppDataSource.getRepository('ClassQuiz');
+      const quizQuestionRepository = AppDataSource.getRepository('QuizQuestion');
+
+      // Get quiz
+      const quiz = await quizRepository.findOne({
+        where: { id: quiz_id }
+      });
+
+      if (!quiz) {
+        const error = new Error('Quiz not found');
+        error.code = 'NOT_FOUND';
+        throw error;
+      }
+
+      // Get class_quiz to find which class this quiz belongs to
+      const classQuiz = await classQuizRepository.findOne({
+        where: { quizz_id: quiz_id }
+      });
+
+      if (!classQuiz) {
+        const error = new Error('Quiz is not assigned to any class');
+        error.code = 'NOT_ASSIGNED';
+        throw error;
+      }
+
+      // Check if student is in the class by calling class-service
+      const classServiceCaller = createServiceCaller(
+        'ClassService',
+        env.CLASS_SERVICE_BASE_URL,
+        env.CLASS_SERVICE_API_TOKEN
+      );
+
+      try {
+        await classServiceCaller(
+          'GET',
+          `/student-classes/check/${student_id}/${classQuiz.class_id}`,
+          null
+        );
+      } catch (error) {
+        console.error(`Student ${student_id} is not in class ${classQuiz.class_id}`);
+        const forbiddenError = new Error('You are not authorized to access this quiz. You must be enrolled in the class.');
+        forbiddenError.code = 'FORBIDDEN';
+        throw forbiddenError;
+      }
+
+      // Check if quiz is within time range
+      const now = new Date();
+      if (now < new Date(classQuiz.start_time)) {
+        const error = new Error('Quiz has not started yet');
+        error.code = 'NOT_STARTED';
+        error.start_time = classQuiz.start_time;
+        throw error;
+      }
+
+      if (now > new Date(classQuiz.end_time)) {
+        const error = new Error('Quiz has ended');
+        error.code = 'ENDED';
+        error.end_time = classQuiz.end_time;
+        throw error;
+      }
+
+      // Try to get questions from cache first
+      let questions = getQuizFromCache(quiz_id);
+
+      if (!questions) {
+        // Cache miss - fetch from database and question service
+        const quizQuestions = await quizQuestionRepository.find({
+          where: { quizz_id: quiz_id }
+        });
+        const question_ids = quizQuestions.map(qq => qq.question_id);
+
+        questions = [];
+        if (question_ids.length > 0) {
+          const questionServiceCaller = createServiceCaller(
+            'QuestionService',
+            env.QUESTION_SERVICE_BASE_URL,
+            env.QUESTION_SERVICE_API_TOKEN
+          );
+
+          // Fetch all questions in parallel using internal API
+          const questionPromises = question_ids.map(async (questionId) => {
+            try {
+              const response = await questionServiceCaller(
+                'GET',
+                `/questions/internal/${questionId}`,
+                null
+              );
+              return response.data;
+            } catch (error) {
+              console.error(`Failed to fetch question ${questionId}:`, error.message);
+              return null;
+            }
+          });
+
+          const questionResults = await Promise.all(questionPromises);
+          questions = questionResults.filter(q => q !== null);
+
+          // Cache the questions for future requests
+          setQuizToCache(quiz_id, questions);
+        }
+      }
+
+      return {
+        id: quiz.id,
+        name: quiz.name,
+        description: quiz.description,
+        teacher_id: quiz.teacher_id,
+        class_id: classQuiz.class_id,
+        start_time: classQuiz.start_time,
+        end_time: classQuiz.end_time,
+        created_at: quiz.created_at,
+        updated_at: quiz.updated_at,
+        questions
+      };
+    } catch (error) {
+      console.error('Error getting quiz for student:', error);
+      throw error;
     }
   }
 }

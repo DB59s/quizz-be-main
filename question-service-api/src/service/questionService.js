@@ -491,6 +491,52 @@ class QuestionService {
       await queryRunner.release();
     }
   }
+
+  /**
+   * Get question by ID for internal service calls (no teacher authorization check)
+   * @param {string} question_id - Question ID
+   * @returns {Promise<Object>} Question with answers
+   */
+  async getQuestionByIdInternal(question_id) {
+    try {
+      const questionRepository = AppDataSource.getRepository('Question');
+      const answerRepository = AppDataSource.getRepository('Answer');
+
+      // Get question
+      const question = await questionRepository.findOne({
+        where: { id: question_id }
+      });
+
+      if (!question) {
+        const error = new Error('Question not found');
+        error.code = 'NOT_FOUND';
+        throw error;
+      }
+
+      // Get answers
+      const answers = await answerRepository.find({
+        where: { question_id }
+      });
+
+      return {
+        id: question.id,
+        content: question.content,
+        level: question.level,
+        type: question.type,
+        teacher_id: question.teacher_id,
+        created_at: question.created_at,
+        updated_at: question.updated_at,
+        answers: answers.map(a => ({
+          id: a.id,
+          content: a.content,
+          is_true: a.is_true
+        }))
+      };
+    } catch (error) {
+      console.error('Error getting question by ID (internal):', error);
+      throw error;
+    }
+  }
 }
 
 module.exports = new QuestionService();

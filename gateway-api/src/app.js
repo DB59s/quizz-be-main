@@ -49,7 +49,11 @@ app.get('/', (req, res) => {
       auth: '/api/v1/auth',
       users: '/api/v1/users',
       admin: '/api/v1/admin',
-      classes: '/api/v1/classes'
+      classes: '/api/v1/classes',
+      subjects: '/api/v1/subjects',
+      questions: '/api/v1/questions',
+      quizzes: '/api/v1/quizzes',
+      classQuizzes: '/api/v1/class-quizzes'
     }
   });
 });
