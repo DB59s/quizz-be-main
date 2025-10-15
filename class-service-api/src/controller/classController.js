@@ -644,7 +644,7 @@ const getClassDetailsForStudent = async (req, res) => {
 
 module.exports = {
   createClass,
-  getClasses,
+  getClassesByTeacher,
   updateClass,
   deleteClass,
   getClassDetails,
