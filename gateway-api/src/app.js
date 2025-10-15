@@ -17,7 +17,13 @@ app.use((req, res, next) => {
   next();
 });
 
-// Swagger UI with cache control
+// Swagger UI with cache control and dynamic spec loading
+app.get('/api-docs/swagger.json', (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  res.send(specs);
+});
+
 app.use('/api-docs', 
   (req, res, next) => {
     // Disable caching for Swagger docs
@@ -33,6 +39,7 @@ app.use('/api-docs',
     customSiteTitle: 'Gateway API Documentation',
     swaggerOptions: {
       persistAuthorization: true,
+      url: '/api-docs/swagger.json?' + Date.now(), // Force reload with timestamp
     }
   })
 );
