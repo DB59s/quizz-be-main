@@ -1,5 +1,6 @@
 const { createServiceCaller } = require('../utils/serviceHelper');
 const { QUIZ_SERVICE_BASEURL, QUIZ_SERVICE_API_TOKEN } = require('../config/env');
+const NodeCache = require('node-cache');
 
 console.log('[Gateway] QUIZ_SERVICE_BASEURL:', QUIZ_SERVICE_BASEURL);
 console.log('[Gateway] QUIZ_SERVICE_API_TOKEN:', QUIZ_SERVICE_API_TOKEN);
@@ -10,6 +11,9 @@ const callQuizService = createServiceCaller(
   QUIZ_SERVICE_BASEURL,
   QUIZ_SERVICE_API_TOKEN
 );
+
+// Create cache with 60 seconds TTL (1 minute)
+const quizListCache = new NodeCache({ stdTTL: 60, checkperiod: 120 });
 
 /**
  * Assign quiz to a class (Teacher only)
@@ -377,11 +381,94 @@ async function getClassQuizById(req, res) {
   }
 }
 
+/**
+ * Get all quizzes for student in a class with pagination (Student only)
+ * GET /api/v1/class-quizzes/class/:class_id/student/all
+ */
+async function getClassQuizzesForStudent(req, res) {
+  try {
+    const { class_id } = req.params;
+    const { page = 1, limit = 10 } = req.query;
+
+    // Get student_id from token
+    const student_id = req.user?.student_id;
+
+    if (!student_id) {
+      return res.status(403).json({
+        success: false,
+        error: 'Forbidden',
+        message: 'Only students can view class quizzes'
+      });
+    }
+
+    // Create cache key
+    const cacheKey = `class_quizzes_${class_id}_${student_id}_${page}_${limit}`;
+
+    // Check cache first
+    const cachedData = quizListCache.get(cacheKey);
+    if (cachedData) {
+      console.log(`[Gateway] Cache HIT for ${cacheKey}`);
+      return res.status(200).json({
+        ...cachedData,
+        cached: true,
+        cache_expires_in: quizListCache.getTtl(cacheKey) ? Math.floor((quizListCache.getTtl(cacheKey) - Date.now()) / 1000) : 0
+      });
+    }
+
+    console.log(`[Gateway] Cache MISS for ${cacheKey}`);
+    console.log(`[Gateway] Student ${student_id} getting quizzes for class ${class_id} (page: ${page}, limit: ${limit})`);
+
+    // Call quiz service
+    try {
+      const response = await callQuizService(
+        'GET',
+        `/class-quizzes/class/${class_id}/student/all?page=${page}&limit=${limit}`,
+        null,
+        {
+          headers: {
+            'x-student-id': student_id
+          }
+        }
+      );
+
+      console.log(`[Gateway] Class quizzes retrieved successfully`);
+      
+      // Cache the response
+      quizListCache.set(cacheKey, response.data);
+      console.log(`[Gateway] Cached data for ${cacheKey} (TTL: 60s)`);
+
+      return res.status(response.status).json({
+        ...response.data,
+        cached: false
+      });
+
+    } catch (serviceError) {
+      console.error(`[Gateway] Failed to get class quizzes:`, serviceError.message);
+      return res.status(serviceError.statusCode || 500).json(
+        serviceError.response || {
+          success: false,
+          error: 'Failed to get class quizzes',
+          message: serviceError.message || 'Failed to retrieve class quizzes'
+        }
+      );
+    }
+
+  } catch (error) {
+    console.error('[Gateway] Unexpected error in getClassQuizzesForStudent:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Internal Server Error',
+      message: 'An unexpected error occurred'
+    });
+  }
+}
+
 module.exports = {
   assignQuizToClass,
   updateClassQuiz,
   removeQuizFromClass,
   getClassQuizzes,
   getAvailableQuizzesForStudent,
+  getClassQuizzesForStudent,
   getClassQuizById
 };

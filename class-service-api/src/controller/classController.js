@@ -311,10 +311,36 @@ const getClassDetails = async (req, res) => {
       });
     }
 
+    // Fetch teacher info from user-service
+    let teacherInfo = null;
+    try {
+      teacherInfo = await getTeacherInfo(classData.teacher_id);
+    } catch (error) {
+      console.error('Failed to fetch teacher info:', error.message);
+      // Continue without teacher info if service is unavailable
+    }
+
+    // Prepare response data
+    const responseData = {
+      _id: classData._id,
+      name: classData.name,
+      description: classData.description,
+      class_code: classData.class_code,
+      max_students: classData.max_students,
+      status: classData.status,
+      created_at: classData.created_at,
+      updated_at: classData.updated_at,
+      teacher: teacherInfo || {
+        teacher_id: classData.teacher_id,
+        // Fallback if user-service is unavailable
+        name: 'Unknown Teacher'
+      }
+    };
+
     return res.status(200).json({
       success: true,
       message: 'Class details retrieved successfully',
-      data: classData
+      data: responseData
     });
   } catch (error) {
     console.error('Get class details error:', error);
@@ -509,12 +535,120 @@ const getClassStudents = async (req, res) => {
   }
 };
 
+/**
+ * Get class details for student (Student only)
+ * GET /api/classes/student/:class_id
+ */
+const getClassDetailsForStudent = async (req, res) => {
+  try {
+    const { class_id } = req.params;
+    const { student_id } = req.query;
+
+    // Validate student_id is provided
+    if (!student_id) {
+      return res.status(400).json({
+        success: false,
+        message: 'student_id is required as query parameter',
+        data: null
+      });
+    }
+
+    // Find the class
+    const classData = await Class.findById(class_id);
+
+    if (!classData) {
+      return res.status(404).json({
+        success: false,
+        message: 'Class not found',
+        data: null
+      });
+    }
+
+    // Check if student is enrolled in this class
+    const studentClass = await StudentClass.findOne({
+      student_id,
+      class_id: classData._id
+    });
+
+    if (!studentClass) {
+      return res.status(403).json({
+        success: false,
+        message: 'You are not enrolled in this class',
+        data: null
+      });
+    }
+
+    // Check if student is approved
+    if (studentClass.status !== STUDENT_CLASS_STATUS.APPROVED) {
+      return res.status(403).json({
+        success: false,
+        message: `Your enrollment is ${studentClass.status}. Only approved students can view class details.`,
+        data: null
+      });
+    }
+
+    // Fetch teacher info from user-service
+    let teacherInfo = null;
+    try {
+      teacherInfo = await getTeacherInfo(classData.teacher_id);
+    } catch (error) {
+      console.error('Failed to fetch teacher info:', error.message);
+      // Continue without teacher info if service is unavailable
+    }
+
+    // Prepare response data
+    const responseData = {
+      _id: classData._id,
+      name: classData.name,
+      description: classData.description,
+      class_code: classData.class_code,
+      max_students: classData.max_students,
+      current_students: classData.current_students,
+      status: classData.status,
+      created_at: classData.created_at,
+      updated_at: classData.updated_at,
+      teacher: teacherInfo || {
+        teacher_id: classData.teacher_id,
+        name: 'Unknown Teacher'
+      },
+      enrollment: {
+        status: studentClass.status,
+        joined_at: studentClass.joined_at
+      }
+    };
+
+    return res.status(200).json({
+      success: true,
+      message: 'Class details retrieved successfully',
+      data: responseData
+    });
+  } catch (error) {
+    console.error('Get class details for student error:', error);
+
+    // Handle invalid ObjectId
+    if (error.name === 'CastError') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid class ID format',
+        data: null
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve class details',
+      data: null
+    });
+  }
+};
+
 module.exports = {
   createClass,
+  getClasses,
   updateClass,
   deleteClass,
-  getClassesByTeacher,
   getClassDetails,
   getClassByCode,
-  getClassStudents
+  getClassStudents,
+  getClassDetailsForStudent
 };

@@ -237,7 +237,7 @@ class ClassQuizController {
   }
 
   /**
-   * Get available quizzes for student in a class
+   * Get available quizzes for student in a class (only active)
    * GET /api/class-quizzes/class/:class_id/student
    */
   async getAvailableQuizzesForStudent(req, res) {
@@ -273,6 +273,54 @@ class ClassQuizController {
       return res.status(500).json({
         success: false,
         message: 'Failed to retrieve available quizzes',
+        error: error.message
+      });
+    }
+  }
+
+  /**
+   * Get all quizzes for student in a class with pagination
+   * GET /api/class-quizzes/class/:class_id/student/all
+   */
+  async getClassQuizzesForStudent(req, res) {
+    try {
+      const student_id = req.headers['x-student-id'];
+
+      if (!student_id) {
+        return res.status(401).json({
+          success: false,
+          message: 'X-Student-ID header is required'
+        });
+      }
+
+      const { class_id } = req.params;
+      const { page = 1, limit = 10 } = req.query;
+
+      const result = await classQuizService.getClassQuizzesForStudent(
+        class_id,
+        student_id,
+        { page: parseInt(page), limit: parseInt(limit) }
+      );
+
+      return res.status(200).json({
+        success: true,
+        message: 'Class quizzes retrieved successfully',
+        data: result.data,
+        pagination: result.pagination
+      });
+    } catch (error) {
+      console.error('Error in getClassQuizzesForStudent:', error);
+
+      if (error.code === 'FORBIDDEN') {
+        return res.status(403).json({
+          success: false,
+          message: error.message
+        });
+      }
+
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to retrieve class quizzes',
         error: error.message
       });
     }

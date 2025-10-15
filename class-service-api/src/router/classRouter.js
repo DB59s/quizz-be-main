@@ -1,12 +1,13 @@
 const express = require('express');
 const {
   createClass,
+  getClasses,
   updateClass,
   deleteClass,
-  getClassesByTeacher,
   getClassDetails,
   getClassByCode,
-  getClassStudents
+  getClassStudents,
+  getClassDetailsForStudent
 } = require('../controller/classController');
 
 const router = express.Router();
@@ -332,5 +333,82 @@ router.get('/join/:class_code', getClassByCode);
  *         description: Server error
  */
 router.get('/:teacher_id/:class_id/students', getClassStudents);
+
+/**
+ * @swagger
+ * /api/v1/classes/student/:class_id:
+ *   get:
+ *     summary: Get class details for student (Student only)
+ *     tags: [Classes]
+ *     parameters:
+ *       - in: path
+ *         name: class_id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Class ID
+ *       - in: query
+ *         name: student_id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Student ID
+ *     responses:
+ *       200:
+ *         description: Class details retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     _id:
+ *                       type: string
+ *                     name:
+ *                       type: string
+ *                     description:
+ *                       type: string
+ *                     class_code:
+ *                       type: string
+ *                     max_students:
+ *                       type: integer
+ *                     current_students:
+ *                       type: integer
+ *                     status:
+ *                       type: string
+ *                     teacher:
+ *                       type: object
+ *                       properties:
+ *                         teacher_id:
+ *                           type: string
+ *                         name:
+ *                           type: string
+ *                         email:
+ *                           type: string
+ *                     enrollment:
+ *                       type: object
+ *                       properties:
+ *                         status:
+ *                           type: string
+ *                         joined_at:
+ *                           type: string
+ *                           format: date-time
+ *       400:
+ *         description: Bad request - Missing student_id
+ *       403:
+ *         description: Forbidden - Not enrolled or not approved
+ *       404:
+ *         description: Class not found
+ *       500:
+ *         description: Server error
+ */
+router.get('/student/:class_id', getClassDetailsForStudent);
 
 module.exports = router;

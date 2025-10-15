@@ -1,7 +1,7 @@
 const express = require('express');
 const { verifyToken } = require('../middlewares/auth.middleware');
 const { requireRoleOnly } = require('../middlewares/gateway.middleware');
-const { createClass, updateClass, deleteClass, getTeacherClasses, getClassDetails, getClassByCode, getClassStudents } = require('../controller/class.controller');
+const { createClass, updateClass, deleteClass, getTeacherClasses, getClassDetails, getClassByCode, getClassStudents, getClassDetailsForStudent } = require('../controller/class.controller');
 
 const router = express.Router();
 
@@ -528,5 +528,92 @@ router.get('/join/:class_code', verifyToken, getClassByCode);
  *         description: Internal server error
  */
 router.get('/teacher/:class_id/students', verifyToken, requireRoleOnly(['teacher']), getClassStudents);
+
+/**
+ * @swagger
+ * /api/v1/classes/student/{class_id}:
+ *   get:
+ *     summary: Get class details for student (Student only)
+ *     tags: [Classes]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: class_id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Class ID
+ *         example: 507f1f77bcf86cd799439011
+ *     responses:
+ *       200:
+ *         description: Class details retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Class details retrieved successfully
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     _id:
+ *                       type: string
+ *                     name:
+ *                       type: string
+ *                       example: Lập trình Web
+ *                     description:
+ *                       type: string
+ *                     class_code:
+ *                       type: string
+ *                       example: ABC123
+ *                     max_students:
+ *                       type: integer
+ *                       example: 50
+ *                     current_students:
+ *                       type: integer
+ *                       example: 25
+ *                     status:
+ *                       type: string
+ *                       example: active
+ *                     teacher:
+ *                       type: object
+ *                       properties:
+ *                         teacher_id:
+ *                           type: string
+ *                         name:
+ *                           type: string
+ *                         email:
+ *                           type: string
+ *                     enrollment:
+ *                       type: object
+ *                       properties:
+ *                         status:
+ *                           type: string
+ *                           example: approved
+ *                         joined_at:
+ *                           type: string
+ *                           format: date-time
+ *                     created_at:
+ *                       type: string
+ *                       format: date-time
+ *                     updated_at:
+ *                       type: string
+ *                       format: date-time
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - Not enrolled or not approved
+ *       404:
+ *         description: Class not found
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/student/:class_id', verifyToken, requireRoleOnly(['student']), getClassDetailsForStudent);
 
 module.exports = router;
