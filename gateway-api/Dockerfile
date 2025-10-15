@@ -1,6 +1,9 @@
 # Use Node.js 18 Alpine base image
 FROM node:18-alpine
 
+# Build argument to bust cache
+ARG CACHEBUST=1
+
 # Install curl for health checks
 RUN apk add --no-cache curl
 
