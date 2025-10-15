@@ -394,21 +394,17 @@ const options = {
       }
     }
   },
-  apis: [
-    path.join(__dirname, '..', 'router', '*.js')
-  ] // Path to the API docs
+  apis: ['./src/router/*.js', './src/router/*.router.js'], // Path to the API docs
 };
 
-// Log the actual paths being scanned
-const routerPath = path.join(__dirname, '..', 'router', '*.js');
-console.log('Swagger scanning router files at:', routerPath);
-
-const specs = swaggerJsdoc(options);
+// Generate specs dynamically to avoid caching issues
+const getSpecs = () => swaggerJsdoc(options);
 
 // Log number of paths found
 console.log('Swagger specs generated with', Object.keys(specs.paths || {}).length, 'endpoints');
 
 module.exports = {
-  specs,
+  specs: getSpecs(),
+  getSpecs,
   swaggerUi
-}; 
+};
