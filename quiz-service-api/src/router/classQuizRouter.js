@@ -24,7 +24,12 @@ router.delete('/:id', classQuizController.removeQuizFromClass);
 router.get('/class/:class_id', classQuizController.getClassQuizzes);
 
 /**
- * GET /api/class-quizzes/class/:class_id/student - Get available quizzes for student
+ * GET /api/class-quizzes/class/:class_id/student/all - Get all quizzes for student with pagination
+ */
+router.get('/class/:class_id/student/all', classQuizController.getClassQuizzesForStudent);
+
+/**
+ * GET /api/class-quizzes/class/:class_id/student - Get available quizzes for student (active only)
  */
 router.get('/class/:class_id/student', classQuizController.getAvailableQuizzesForStudent);
 

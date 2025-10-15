@@ -7,6 +7,7 @@ const {
   removeQuizFromClass,
   getClassQuizzes,
   getAvailableQuizzesForStudent,
+  getClassQuizzesForStudent,
   getClassQuizById
 } = require('../controller/classQuiz.controller');
 
@@ -262,9 +263,109 @@ router.get('/class/:class_id', verifyToken, requireRoleOnly(['teacher']), getCla
 
 /**
  * @swagger
+ * /api/v1/class-quizzes/class/{class_id}/student/all:
+ *   get:
+ *     summary: Get all quizzes for student in a class with pagination (Student only)
+ *     tags: [Class Quizzes]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: class_id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Class ID
+ *         example: class_123
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Items per page
+ *     responses:
+ *       200:
+ *         description: List of all quizzes with pagination (cached for 1 minute)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Class quizzes retrieved successfully
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                         format: uuid
+ *                       quiz_id:
+ *                         type: string
+ *                         format: uuid
+ *                       class_id:
+ *                         type: string
+ *                       start_time:
+ *                         type: string
+ *                         format: date-time
+ *                       end_time:
+ *                         type: string
+ *                         format: date-time
+ *                       status:
+ *                         type: string
+ *                         enum: [upcoming, active, ended]
+ *                       quiz:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                             format: uuid
+ *                           name:
+ *                             type: string
+ *                           description:
+ *                             type: string
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     current_page:
+ *                       type: integer
+ *                     items_per_page:
+ *                       type: integer
+ *                     total_items:
+ *                       type: integer
+ *                     total_pages:
+ *                       type: integer
+ *                 cached:
+ *                   type: boolean
+ *                   description: Whether data is from cache
+ *                 cache_expires_in:
+ *                   type: integer
+ *                   description: Seconds until cache expires (only if cached=true)
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - Student not enrolled in class
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/class/:class_id/student/all', verifyToken, requireRoleOnly(['student']), getClassQuizzesForStudent);
+
+/**
+ * @swagger
  * /api/v1/class-quizzes/class/{class_id}/student:
  *   get:
- *     summary: Get available quizzes for student in a class (Student only)
+ *     summary: Get available quizzes for student in a class (Student only - Active only)
  *     tags: [Class Quizzes]
  *     security:
  *       - BearerAuth: []

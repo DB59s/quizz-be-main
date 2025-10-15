@@ -510,6 +510,59 @@ async function getClassStudents(req, res) {
   }
 }
 
+/**
+ * Get class details for student (Student only)
+ * GET /api/v1/classes/student/:class_id
+ */
+async function getClassDetailsForStudent(req, res) {
+  try {
+    const { class_id } = req.params;
+
+    // Get student_id from token
+    const student_id = req.user?.student_id;
+
+    if (!student_id) {
+      return res.status(403).json({
+        success: false,
+        error: 'Forbidden',
+        message: 'Only students can view class details'
+      });
+    }
+
+    console.log(`[Gateway] Student ${student_id} getting class details for ${class_id}`);
+
+    // Call class service
+    try {
+      const response = await callClassService(
+        'GET',
+        `/classes/student/${class_id}?student_id=${student_id}`,
+        null
+      );
+
+      console.log(`[Gateway] Class details retrieved successfully for student`);
+      return res.status(response.status).json(response.data);
+
+    } catch (serviceError) {
+      console.error(`[Gateway] Failed to get class details for student:`, serviceError.message);
+      return res.status(serviceError.statusCode || 500).json(
+        serviceError.response || {
+          success: false,
+          error: 'Failed to get class details',
+          message: serviceError.message || 'Failed to retrieve class details'
+        }
+      );
+    }
+
+  } catch (error) {
+    console.error('[Gateway] Unexpected error in getClassDetailsForStudent:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Internal Server Error',
+      message: 'An unexpected error occurred'
+    });
+  }
+}
+
 module.exports = {
   createClass,
   updateClass,
@@ -518,5 +571,6 @@ module.exports = {
   getClassDetails,
   getClassByCode,
   getClassStudents,
+  getClassDetailsForStudent,
   callClassService
 };

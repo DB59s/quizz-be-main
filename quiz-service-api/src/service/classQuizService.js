@@ -269,7 +269,7 @@ class ClassQuizService {
   }
 
   /**
-   * Get available quizzes for student in a class
+   * Get available quizzes for student in a class (only active quizzes)
    * @param {string} class_id - Class ID
    * @param {string} student_id - Student ID
    * @returns {Promise<Array>} List of available quizzes
@@ -323,6 +323,102 @@ class ClassQuizService {
       }));
     } catch (error) {
       console.error('Error getting available quizzes for student:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get all quizzes for student in a class with pagination (all statuses)
+   * @param {string} class_id - Class ID
+   * @param {string} student_id - Student ID
+   * @param {Object} pagination - Pagination options
+   * @param {number} pagination.page - Page number
+   * @param {number} pagination.limit - Items per page
+   * @returns {Promise<Object>} Paginated list of quizzes
+   */
+  async getClassQuizzesForStudent(class_id, student_id, pagination = {}) {
+    try {
+      const { page = 1, limit = 10 } = pagination;
+      const skip = (page - 1) * limit;
+
+      const classQuizRepository = AppDataSource.getRepository('ClassQuiz');
+
+      // Verify student is in the class
+      const classServiceCaller = createServiceCaller(
+        'ClassService',
+        env.CLASS_SERVICE_BASE_URL,
+        env.CLASS_SERVICE_API_TOKEN
+      );
+
+      try {
+        await classServiceCaller(
+          'GET',
+          `/student-classes/check/${student_id}/${class_id}`,
+          null
+        );
+      } catch (error) {
+        console.error(`Student ${student_id} is not in class ${class_id}`);
+        const forbiddenError = new Error('You are not enrolled in this class');
+        forbiddenError.code = 'FORBIDDEN';
+        throw forbiddenError;
+      }
+
+      // Get total count
+      const total = await classQuizRepository
+        .createQueryBuilder('cq')
+        .where('cq.class_id = :class_id', { class_id })
+        .getCount();
+
+      // Get paginated quizzes
+      const classQuizzes = await classQuizRepository
+        .createQueryBuilder('cq')
+        .leftJoinAndSelect('cq.quiz', 'quiz')
+        .where('cq.class_id = :class_id', { class_id })
+        .orderBy('cq.start_time', 'DESC')
+        .skip(skip)
+        .take(limit)
+        .getMany();
+
+      const now = new Date();
+      const quizzes = classQuizzes.map(cq => {
+        const startTime = new Date(cq.start_time);
+        const endTime = new Date(cq.end_time);
+        
+        let status = 'upcoming';
+        if (now >= startTime && now <= endTime) {
+          status = 'active';
+        } else if (now > endTime) {
+          status = 'ended';
+        }
+
+        return {
+          id: cq.id,
+          quiz_id: cq.quizz_id,
+          class_id: cq.class_id,
+          start_time: cq.start_time,
+          end_time: cq.end_time,
+          status,
+          quiz: {
+            id: cq.quiz.id,
+            name: cq.quiz.name,
+            description: cq.quiz.description,
+            created_at: cq.quiz.created_at,
+            updated_at: cq.quiz.updated_at
+          }
+        };
+      });
+
+      return {
+        data: quizzes,
+        pagination: {
+          current_page: parseInt(page),
+          items_per_page: parseInt(limit),
+          total_items: total,
+          total_pages: Math.ceil(total / limit)
+        }
+      };
+    } catch (error) {
+      console.error('Error getting class quizzes for student:', error);
       throw error;
     }
   }
