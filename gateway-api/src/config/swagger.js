@@ -400,11 +400,13 @@ const options = {
 // Generate specs dynamically to avoid caching issues
 const getSpecs = () => swaggerJsdoc(options);
 
+const specs = getSpecs();
+
 // Log number of paths found
 console.log('Swagger specs generated with', Object.keys(specs.paths || {}).length, 'endpoints');
 
 module.exports = {
-  specs: getSpecs(),
+  specs,
   getSpecs,
   swaggerUi
 };
