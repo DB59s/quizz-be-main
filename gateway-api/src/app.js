@@ -17,12 +17,25 @@ app.use((req, res, next) => {
   next();
 });
 
-// Swagger UI
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs, {
-  explorer: true,
-  customCss: '.swagger-ui .topbar { display: none }',
-  customSiteTitle: 'Auth Service API Documentation'
-}));
+// Swagger UI with cache control
+app.use('/api-docs', 
+  (req, res, next) => {
+    // Disable caching for Swagger docs
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    next();
+  },
+  swaggerUi.serve, 
+  swaggerUi.setup(specs, {
+    explorer: true,
+    customCss: '.swagger-ui .topbar { display: none }',
+    customSiteTitle: 'Gateway API Documentation',
+    swaggerOptions: {
+      persistAuthorization: true,
+    }
+  })
+);
 
 // Health check endpoint (for Docker)
 app.get('/health', (req, res) => {

@@ -6,9 +6,9 @@ const options = {
   definition: {
     openapi: '3.0.0',
     info: {
-      title: 'Auth Service API',
+      title: 'Gateway API',
       version: '1.0.0',
-      description: 'API documentation for Auth Service with JWT authentication',
+      description: `API documentation for Gateway Service with JWT authentication (Last updated: ${new Date().toISOString()})`,
       contact: {
         name: 'API Support',
         email: 'support@example.com'
