@@ -117,6 +117,41 @@ async function createSubmission(req, res) {
 }
 
 /**
+ * GET /api/v1/submissions - Get all submissions (Admin only)
+ */
+async function getAllSubmissions(req, res) {
+  try {
+    console.log('[Gateway] Admin fetching all submissions');
+
+    // Call Submission Service
+    const response = await callService(
+      {
+        serviceName: 'Submission Service',
+        baseUrl: SUBMISSION_SERVICE_URL,
+        apiToken: SUBMISSION_SERVICE_TOKEN
+      },
+      'GET',
+      '/submissions',
+      null
+    );
+
+    return res.status(response.status).json(response.data);
+  } catch (error) {
+    console.error('[Gateway] Error fetching submissions:', error.message);
+    
+    if (error.response) {
+      return res.status(error.response.status).json(error.response.data);
+    }
+    
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to fetch submissions',
+      data: null
+    });
+  }
+}
+
+/**
  * POST /api/v1/submissions/:submission_id/grade - Grade a submission (Internal/Admin only)
  */
 async function gradeSubmission(req, res) {
@@ -155,5 +190,6 @@ async function gradeSubmission(req, res) {
 
 module.exports = {
   createSubmission,
-  gradeSubmission
+  gradeSubmission,
+  getAllSubmissions
 };
