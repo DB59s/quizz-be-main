@@ -160,6 +160,24 @@ class SubmissionService {
     }
   }
 
+  // Get all submissions
+  async getAllSubmissions() {
+    try {
+      await this.init();
+
+      const submissions = await this.submissionRepository.find({
+        relations: ['answers'],
+        order: {
+          submission_time: 'DESC'
+        }
+      });
+
+      return submissions;
+    } catch (error) {
+      throw error;
+    }
+  }
+
   // Grade a submission
   async gradeSubmission(submission_id) {
     try {

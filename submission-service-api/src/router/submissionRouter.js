@@ -13,6 +13,32 @@ const router = express.Router();
 /**
  * @swagger
  * /submissions:
+ *   get:
+ *     summary: Get all submissions (Admin only)
+ *     description: Retrieve all submissions from all students
+ *     tags: [Submissions]
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of all submissions
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Submissions retrieved successfully"
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *       500:
+ *         description: Internal server error
  *   post:
  *     summary: Submit quiz answers (Student role required)
  *     description: Student submits their answers for a specific ClassQuiz. The system validates enrollment, quiz timing, prevents duplicate submissions, and automatically grades the submission.
@@ -142,6 +168,7 @@ const router = express.Router();
  *                 data:
  *                   type: null
  */
+router.get('/', submissionController.getAllSubmissions.bind(submissionController));
 router.post('/', submissionController.createSubmission.bind(submissionController));
 
 /**

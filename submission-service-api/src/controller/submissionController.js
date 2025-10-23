@@ -78,6 +78,28 @@ class SubmissionController {
     }
   }
 
+  // Get all submissions - GET /api/submissions
+  // Role: Admin
+  async getAllSubmissions(req, res) {
+    try {
+      const submissions = await submissionService.getAllSubmissions();
+      
+      res.status(200).json({
+        success: true,
+        message: 'Submissions retrieved successfully',
+        data: submissions
+      });
+    } catch (error) {
+      console.error('Error fetching submissions:', error.message);
+      
+      res.status(500).json({
+        success: false,
+        message: error.message,
+        data: null
+      });
+    }
+  }
+
   // Grade a submission - POST /api/submissions/:submission_id/grade
   // Internal API - typically called after submission creation or by background job
   async gradeSubmission(req, res) {
