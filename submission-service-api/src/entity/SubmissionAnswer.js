@@ -14,11 +14,11 @@ const SubmissionAnswer = new EntitySchema({
       type: 'uuid',
       nullable: false,
     },
-    answer_id: {
+    question_id: {
       type: 'uuid',
       nullable: false,
     },
-    question_id: {
+    selected_answer_id: {
       type: 'uuid',
       nullable: false,
     },

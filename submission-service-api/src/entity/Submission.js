@@ -15,7 +15,7 @@ const Submission = new EntitySchema({
       nullable: true,
     },
     submission_time: {
-      type: 'date',
+      type: 'timestamp',
       nullable: false,
     },
     total_time: {
@@ -31,8 +31,14 @@ const Submission = new EntitySchema({
       length: 255,
       nullable: false,
     },
-    quizz_class_id: {
+    class_quiz_id: {
       type: 'uuid',
+      nullable: false,
+    },
+    status: {
+      type: 'varchar',
+      length: 50,
+      default: 'submitted',
       nullable: false,
     },
   },

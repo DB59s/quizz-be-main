@@ -73,7 +73,8 @@ app.get('/', (req, res) => {
       subjects: '/api/v1/subjects',
       questions: '/api/v1/questions',
       quizzes: '/api/v1/quizzes',
-      classQuizzes: '/api/v1/class-quizzes'
+      classQuizzes: '/api/v1/class-quizzes',
+      submissions: '/api/v1/submissions'
     }
   });
 });
