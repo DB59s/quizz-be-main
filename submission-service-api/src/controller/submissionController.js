@@ -1,99 +1,25 @@
 const { submissionService } = require('../service');
 
 class SubmissionController {
-  // Get all submissions - GET /api/submissions
-  async getAllSubmissions(req, res) {
-    try {
-      const submissions = await submissionService.getAllSubmissions();
-      
-      res.status(200).json({
-        success: true,
-        message: 'Submissions retrieved successfully',
-        data: submissions
-      });
-    } catch (error) {
-      console.error('Error getting submissions:', error.message);
-      res.status(500).json({
-        success: false,
-        message: error.message,
-        data: null
-      });
-    }
-  }
-
-  // Get submission by ID - GET /api/submissions/:id
-  async getSubmissionById(req, res) {
-    try {
-      const { id } = req.params;
-
-      const submission = await submissionService.getSubmissionById(id);
-      
-      res.status(200).json({
-        success: true,
-        message: 'Submission retrieved successfully',
-        data: submission
-      });
-    } catch (error) {
-      console.error('Error getting submission:', error.message);
-      
-      const statusCode = error.message.includes('not found') ? 404 : 500;
-      res.status(statusCode).json({
-        success: false,
-        message: error.message,
-        data: null
-      });
-    }
-  }
-
-  // Get submissions by student ID - GET /api/submissions/student/:studentId
-  async getSubmissionsByStudentId(req, res) {
-    try {
-      const { studentId } = req.params;
-
-      const submissions = await submissionService.getSubmissionsByStudentId(studentId);
-      
-      res.status(200).json({
-        success: true,
-        message: 'Submissions retrieved successfully',
-        data: submissions
-      });
-    } catch (error) {
-      console.error('Error getting submissions by student:', error.message);
-      res.status(500).json({
-        success: false,
-        message: error.message,
-        data: null
-      });
-    }
-  }
-
-  // Get submissions by quiz class ID - GET /api/submissions/quiz-class/:quizzClassId
-  async getSubmissionsByQuizClassId(req, res) {
-    try {
-      const { quizzClassId } = req.params;
-
-      const submissions = await submissionService.getSubmissionsByQuizClassId(quizzClassId);
-      
-      res.status(200).json({
-        success: true,
-        message: 'Submissions retrieved successfully',
-        data: submissions
-      });
-    } catch (error) {
-      console.error('Error getting submissions by quiz class:', error.message);
-      res.status(500).json({
-        success: false,
-        message: error.message,
-        data: null
-      });
-    }
-  }
 
   // Create new submission - POST /api/submissions
+  // Role: Student
   async createSubmission(req, res) {
     try {
       const submissionData = req.body;
       
+      // Get student_id from JWT token (passed by Gateway)
+      // Assuming Gateway adds user info to req.user or req.headers
+      const student_id = req.user?.user_id || req.headers['x-user-id'];
+      
+      if (!student_id) {
+        return res.status(401).json({
+          success: false,
+          message: 'Student ID not found in token',
+          data: null
+        });
+      }
+
       if (!submissionData || Object.keys(submissionData).length === 0) {
         return res.status(400).json({
           success: false,
@@ -102,17 +28,48 @@ class SubmissionController {
         });
       }
 
-      const submission = await submissionService.createSubmission(submissionData);
+      const submission = await submissionService.createSubmission(student_id, submissionData);
+      
+      // Prepare response data
+      const responseData = {
+        submission_id: submission.id,
+        class_quiz_id: submission.class_quiz_id,
+        student_id: submission.student_id,
+        submission_time: submission.submission_time,
+        total_time: submission.total_time,
+        status: submission.status,
+        answers_count: submission.answers?.length || 0
+      };
+
+      // Include grading results if available
+      if (submission.status === 'graded') {
+        responseData.score = submission.score;
+        responseData.n_total_true = submission.n_total_true;
+        responseData.graded = true;
+      } else {
+        responseData.graded = false;
+      }
       
       res.status(201).json({
         success: true,
-        message: 'Submission created successfully',
-        data: submission
+        message: submission.status === 'graded' 
+          ? 'Submission created and graded successfully' 
+          : 'Submission created successfully',
+        data: responseData
       });
     } catch (error) {
       console.error('Error creating submission:', error.message);
       
-      const statusCode = error.message.includes('Validation failed') ? 400 : 500;
+      // Handle specific error codes
+      let statusCode = 500;
+      if (error.statusCode === 409) {
+        statusCode = 409; // Conflict - already submitted
+      } else if (error.message.includes('not found') || error.message.includes('not enrolled')) {
+        statusCode = 403; // Forbidden
+      } else if (error.message.includes('required') || error.message.includes('not started') || error.message.includes('deadline')) {
+        statusCode = 400; // Bad request
+      }
+      
       res.status(statusCode).json({
         success: false,
         message: error.message,
@@ -121,34 +78,36 @@ class SubmissionController {
     }
   }
 
-  // Update submission - PUT /api/submissions/:id
-  async updateSubmission(req, res) {
+  // Grade a submission - POST /api/submissions/:submission_id/grade
+  // Internal API - typically called after submission creation or by background job
+  async gradeSubmission(req, res) {
     try {
-      const { id } = req.params;
-      const submissionData = req.body;
+      const { submission_id } = req.params;
 
-      if (!submissionData || Object.keys(submissionData).length === 0) {
+      if (!submission_id) {
         return res.status(400).json({
           success: false,
-          message: 'Request body is required',
+          message: 'submission_id is required',
           data: null
         });
       }
 
-      const submission = await submissionService.updateSubmission(id, submissionData);
+      const result = await submissionService.gradeSubmission(submission_id);
       
       res.status(200).json({
         success: true,
-        message: 'Submission updated successfully',
-        data: submission
+        message: 'Submission graded successfully',
+        data: result
       });
     } catch (error) {
-      console.error('Error updating submission:', error.message);
+      console.error('Error grading submission:', error.message);
       
       let statusCode = 500;
-      if (error.message.includes('not found')) {
+      if (error.statusCode === 404) {
         statusCode = 404;
-      } else if (error.message.includes('Validation failed')) {
+      } else if (error.message.includes('already been graded')) {
+        statusCode = 409; // Conflict
+      } else if (error.message.includes('not found') || error.message.includes('no questions')) {
         statusCode = 400;
       }
       
@@ -160,29 +119,6 @@ class SubmissionController {
     }
   }
 
-  // Delete submission - DELETE /api/submissions/:id
-  async deleteSubmission(req, res) {
-    try {
-      const { id } = req.params;
-
-      const result = await submissionService.deleteSubmission(id);
-      
-      res.status(200).json({
-        success: true,
-        message: result.message,
-        data: null
-      });
-    } catch (error) {
-      console.error('Error deleting submission:', error.message);
-      
-      const statusCode = error.message.includes('not found') ? 404 : 500;
-      res.status(statusCode).json({
-        success: false,
-        message: error.message,
-        data: null
-      });
-    }
-  }
 }
 
 module.exports = new SubmissionController();

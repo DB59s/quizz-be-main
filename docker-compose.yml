@@ -133,6 +133,8 @@ services:
       QUESTION_SERVICE_API_TOKEN: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
       QUIZ_SERVICE_BASEURL: http://quiz-service-api:9010/api/v1
       QUIZ_SERVICE_API_TOKEN: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.quiz_service_token
+      SUBMISSION_SERVICE_BASEURL: http://submission-service-api:9011/api
+      SUBMISSION_SERVICE_API_TOKEN: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.submission_service_token
       # Google configuration
       GOOGLE_CLIENT_ID: 70714368044-ggb9g17lp5vtr6elo9gtrkvvpq9hgflb.apps.googleusercontent.com
       GOOGLE_CLIENT_SECRET: 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
@@ -326,6 +328,15 @@ services:
       DB_SYNCHRONIZE: "true"
       DB_LOGGING: "false"
       API_TOKEN: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.submission_service_token
+      # External Services
+      USER_SERVICE_BASEURL: http://user-service-api:9004/api/v1
+      USER_SERVICE_API_TOKEN: 45f65we46f5ew465few465we46fwe46f4ew65f46w5e4f65we4f65ew46few465f
+      CLASS_SERVICE_BASEURL: http://class-service-api:9007/api/v1
+      CLASS_SERVICE_API_TOKEN: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2NvdW50X2lkIjoiZTAxZWQ0NTItODk5Zi00ZWE0LWIwZDEtMjNhZWE2Yzk5NjBkIiwicm9sZSI6InN0dWRlbnQiLCJ1c2VyX2lkIjoiNjhkZjk4OTNjZDA1Yzk2MjgyNGU4NTI0IiwiaWF0IjoxNzU5NTQ0ODQ4LCJleHAiOjE3NTk1NDU3NDgsImF1ZCI6ImFwaS11c2VycyIsImlzcyI6ImF1dGgtc2VydmljZSJ9.y-fbcJPEyZTzWTohMT_XotUnRoejWSa0aOFz-NY00JY
+      QUESTION_SERVICE_BASEURL: http://question-service-api:9009/api/v1
+      QUESTION_SERVICE_API_TOKEN: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
+      QUIZ_SERVICE_BASEURL: http://quiz-service-api:9010/api/v1
+      QUIZ_SERVICE_API_TOKEN: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.quiz_service_token
     ports:
       - "9011:9011"
     networks:

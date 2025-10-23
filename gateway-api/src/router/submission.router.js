@@ -1,5 +1,10 @@
 const express = require('express');
-const { submissionController } = require('../controller');
+const { verifyToken } = require('../middlewares/auth.middleware');
+const { requireRoleOnly } = require('../middlewares/gateway.middleware');
+const { 
+  createSubmission,
+  gradeSubmission
+} = require('../controller/submission.controller');
 
 const router = express.Router();
 
@@ -12,10 +17,10 @@ const router = express.Router();
 
 /**
  * @swagger
- * /submissions:
+ * /api/v1/submissions:
  *   post:
- *     summary: Submit quiz answers (Student role required)
- *     description: Student submits their answers for a specific ClassQuiz. The system validates enrollment, quiz timing, prevents duplicate submissions, and automatically grades the submission.
+ *     summary: Submit quiz answers (Student only, Rate limited: 1 submission per 15 minutes per quiz)
+ *     description: Student submits their answers for a specific ClassQuiz. The system validates enrollment, quiz timing, prevents duplicate submissions, and automatically grades the submission. Rate limited to 1 submission per 15 minutes per quiz.
  *     tags: [Submissions]
  *     security:
  *       - BearerAuth: []
@@ -69,7 +74,7 @@ const router = express.Router();
  *             total_time: 1150
  *     responses:
  *       201:
- *         description: Submission created successfully
+ *         description: Submission created and graded successfully
  *         content:
  *           application/json:
  *             schema:
@@ -80,7 +85,7 @@ const router = express.Router();
  *                   example: true
  *                 message:
  *                   type: string
- *                   example: "Submission created successfully"
+ *                   example: "Submission created and graded successfully"
  *                 data:
  *                   type: object
  *                   properties:
@@ -100,34 +105,27 @@ const router = express.Router();
  *                     status:
  *                       type: string
  *                       example: "graded"
- *                       description: Status of submission (submitted or graded)
  *                     answers_count:
  *                       type: integer
- *                       description: Number of answers submitted
  *                     graded:
  *                       type: boolean
  *                       example: true
- *                       description: Whether the submission has been graded
  *                     score:
  *                       type: number
  *                       example: 8
- *                       description: Score achieved (only if graded=true)
  *                     n_total_true:
  *                       type: integer
  *                       example: 8
- *                       description: Number of correct answers (only if graded=true)
  *       400:
  *         description: Bad request - Invalid data or quiz not available
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
  *       401:
- *         description: Unauthorized - Student ID not found in token
+ *         description: Unauthorized
  *       403:
  *         description: Forbidden - Student not enrolled or ClassQuiz not found
  *       409:
  *         description: Conflict - Submission already exists for this quiz
+ *       429:
+ *         description: Too Many Requests - Rate limit exceeded (15 minutes cooldown)
  *         content:
  *           application/json:
  *             schema:
@@ -138,18 +136,22 @@ const router = express.Router();
  *                   example: false
  *                 message:
  *                   type: string
- *                   example: "Submission already exists for this quiz"
+ *                   example: "You can only submit once every 15 minutes. Please wait 12 more minute(s)."
  *                 data:
- *                   type: null
+ *                   type: object
+ *                   properties:
+ *                     remainingMinutes:
+ *                       type: integer
+ *                       example: 12
  */
-router.post('/', submissionController.createSubmission.bind(submissionController));
+router.post('/', verifyToken, requireRoleOnly(['student']), createSubmission);
 
 /**
  * @swagger
- * /submissions/{submission_id}/grade:
+ * /api/v1/submissions/{submission_id}/grade:
  *   post:
- *     summary: Grade a submission (Internal API)
- *     description: Automatically grade a submission by comparing student answers with correct answers from Question Service. This is typically called internally after submission creation or by a background job.
+ *     summary: Grade a submission (Admin/Internal only)
+ *     description: Manually trigger grading for a submission. This is typically used for re-grading or when auto-grading fails.
  *     tags: [Submissions]
  *     security:
  *       - BearerAuth: []
@@ -189,47 +191,26 @@ router.post('/', submissionController.createSubmission.bind(submissionController
  *                       format: uuid
  *                     score:
  *                       type: number
- *                       description: Total score achieved
  *                       example: 8
  *                     max_score:
  *                       type: number
- *                       description: Maximum possible score
  *                       example: 10
  *                     n_total_true:
  *                       type: integer
- *                       description: Number of correct answers
  *                       example: 8
  *                     total_questions:
  *                       type: integer
- *                       description: Total number of questions
  *                       example: 10
  *                     status:
  *                       type: string
  *                       example: "graded"
- *                     submission_time:
- *                       type: string
- *                       format: date-time
  *       400:
- *         description: Bad request - Invalid submission or quiz has no questions
+ *         description: Bad request
  *       404:
  *         description: Submission not found
  *       409:
  *         description: Conflict - Submission has already been graded
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Submission has already been graded"
- *                 data:
- *                   type: null
  */
-router.post('/:submission_id/grade', submissionController.gradeSubmission.bind(submissionController));
-
+router.post('/:submission_id/grade', verifyToken, requireRoleOnly(['admin', 'teacher']), gradeSubmission);
 
 module.exports = router;
