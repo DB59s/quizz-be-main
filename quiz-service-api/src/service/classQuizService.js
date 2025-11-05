@@ -427,9 +427,10 @@ class ClassQuizService {
    * Get class quiz by ID
    * @param {string} class_quiz_id - ClassQuiz ID
    * @param {string} teacher_id - Teacher ID for authorization
+   * @param {boolean} isServiceCall - Whether this is a service-to-service call
    * @returns {Promise<Object>} ClassQuiz details
    */
-  async getClassQuizById(class_quiz_id, teacher_id) {
+  async getClassQuizById(class_quiz_id, teacher_id, isServiceCall = false) {
     try {
       const classQuizRepository = AppDataSource.getRepository('ClassQuiz');
 
@@ -445,8 +446,8 @@ class ClassQuizService {
         throw error;
       }
 
-      // Check authorization
-      if (classQuiz.quiz.teacher_id !== teacher_id) {
+      // Check authorization (skip for service-to-service calls)
+      if (!isServiceCall && classQuiz.quiz.teacher_id !== teacher_id) {
         const error = new Error('You do not have permission to view this assignment');
         error.code = 'FORBIDDEN';
         throw error;

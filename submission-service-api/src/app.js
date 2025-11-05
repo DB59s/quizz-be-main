@@ -13,6 +13,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' })); // Parse URL-enc
 // Request logging middleware
 app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+  console.log(`Headers:`, JSON.stringify(req.headers, null, 2));
   next();
 });
 

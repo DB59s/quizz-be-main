@@ -200,8 +200,10 @@ class QuizController {
   async getQuizById(req, res) {
     try {
       const teacher_id = req.headers['x-teacher-id'];
+      const isServiceCall = req.headers['x-service-call'] === 'true';
 
-      if (!teacher_id) {
+      // Only require teacher_id if not a service-to-service call
+      if (!teacher_id && !isServiceCall) {
         return res.status(401).json({
           success: false,
           message: 'Teacher ID is required in header (x-teacher-id)'
@@ -210,7 +212,7 @@ class QuizController {
 
       const { id } = req.params;
 
-      const quiz = await quizService.getQuizById(id, teacher_id);
+      const quiz = await quizService.getQuizById(id, teacher_id, isServiceCall);
 
       return res.status(200).json({
         success: true,

@@ -37,7 +37,11 @@ class SubmissionService {
       console.log(`[Submission Service] Fetching ClassQuiz info for: ${class_quiz_id}`);
       let classQuizResponse;
       try {
-        classQuizResponse = await quizService('GET', `/class-quizzes/${class_quiz_id}`);
+        classQuizResponse = await quizService('GET', `/class-quizzes/${class_quiz_id}`, null, {
+          headers: {
+            'x-service-call': 'true'
+          }
+        });
       } catch (error) {
         if (error.statusCode === 404) {
           throw new Error('ClassQuiz not found');
@@ -62,6 +66,8 @@ class SubmissionService {
         throw new Error('Quiz submission deadline has passed');
       }
 
+      console.log("dữ liệu của class quiz như sau  " , classQuiz);
+
       const class_id = classQuiz.class_id;
       if (!class_id) {
         throw new Error('class_id not found in ClassQuiz');
@@ -70,13 +76,17 @@ class SubmissionService {
       // Step 3: Verify student is enrolled in the class
       console.log(`[Submission Service] Checking student enrollment: ${student_id} in class ${class_id}`);
       try {
-        const enrollmentResponse = await classService('GET', `/student-classes/check/${student_id}/${class_id}`);
-        
-        if (!enrollmentResponse.data.success || !enrollmentResponse.data.data.isEnrolled) {
+        const enrollmentResponse = await classService('GET', `/student-classes/check/${student_id}/${class_id}`, null, {
+          headers: {
+            'x-service-call': 'true'
+          }
+        });
+
+        if (!enrollmentResponse.data.success || !enrollmentResponse.data.data.is_in_class) {
           throw new Error('Student is not enrolled in this class or not approved');
         }
       } catch (error) {
-        if (error.message.includes('not enrolled')) {
+        if (error.message.includes('not enrolled') || error.message.includes('not approved')) {
           throw error;
         }
         throw new Error(`Failed to verify enrollment: ${error.message}`);
@@ -178,6 +188,228 @@ class SubmissionService {
     }
   }
 
+  // Get submissions by class for student
+  async getSubmissionsByClassForStudent(student_id, class_id) {
+    try {
+      await this.init();
+
+      // Step 1: Verify student is enrolled in the class
+      console.log(`[Submission Service] Checking student enrollment: ${student_id} in class ${class_id}`);
+      try {
+        const enrollmentResponse = await classService('GET', `/student-classes/check/${student_id}/${class_id}`, null, {
+          headers: {
+            'x-service-call': 'true'
+          }
+        });
+
+        if (!enrollmentResponse.data.success || !enrollmentResponse.data.data.is_in_class) {
+          const error = new Error('Student is not enrolled in this class or not approved');
+          error.statusCode = 403;
+          throw error;
+        }
+      } catch (error) {
+        if (error.statusCode === 403) {
+          throw error;
+        }
+        throw new Error(`Failed to verify enrollment: ${error.message}`);
+      }
+
+      // Step 2: Get all submissions for this student
+      const submissions = await this.submissionRepository.find({
+        where: { student_id: student_id },
+        relations: ['answers']
+      });
+
+      // Step 3: For each submission, get class_quiz info and filter by class_id
+      const result = [];
+
+      for (const submission of submissions) {
+        try {
+          // Get ClassQuiz info
+          const classQuizResponse = await quizService('GET', `/class-quizzes/${submission.class_quiz_id}`, null, {
+            headers: {
+              'x-service-call': 'true'
+            }
+          });
+          const classQuiz = classQuizResponse.data.data;
+
+          // Only include submissions from the specified class
+          if (classQuiz && classQuiz.class_id === class_id) {
+            // Get quiz name
+            let quizName = 'Unknown Quiz';
+            try {
+              const quizResponse = await quizService('GET', `/quizzes/${classQuiz.quiz_id}`, null, {
+                headers: {
+                  'x-service-call': 'true'
+                }
+              });
+              quizName = quizResponse.data.data?.name || 'Unknown Quiz';
+            } catch (error) {
+              console.warn(`Failed to fetch quiz name for quiz ${classQuiz.quiz_id}`);
+            }
+
+            result.push({
+              submission_id: submission.id,
+              class_quiz_id: submission.class_quiz_id,
+              quiz_name: quizName,
+              submission_time: submission.submission_time,
+              score: submission.score,
+              status: submission.status
+            });
+          }
+        } catch (error) {
+          console.warn(`Failed to process submission ${submission.id}: ${error.message}`);
+          // Continue processing other submissions
+        }
+      }
+
+      return result;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  // Helper method to build detailed results from submission answers and questions
+  async buildDetailedResults(submission, questionIds, questionsMap) {
+    const detailedResults = [];
+
+    // Build student answers map
+    const studentAnswersMap = new Map();
+    submission.answers.forEach(ans => {
+      if (!studentAnswersMap.has(ans.question_id)) {
+        studentAnswersMap.set(ans.question_id, new Set());
+      }
+      studentAnswersMap.get(ans.question_id).add(ans.selected_answer_id);
+    });
+
+    for (const question_id of questionIds) {
+      const questionData = questionsMap.get(question_id);
+      if (!questionData) {
+        console.warn(`Question ${question_id} not found, skipping`);
+        continue;
+      }
+
+      const selectedAnswerIds = studentAnswersMap.get(question_id) || new Set();
+
+      // Build answer details
+      const answers = questionData.answers.map(ans => ({
+        answer_id: ans.id,
+        content: ans.content,
+        is_correct: ans.is_true,
+        student_selected: selectedAnswerIds.has(ans.id)
+      }));
+
+      detailedResults.push({
+        question_id: question_id,
+        content: questionData.content,
+        answers: answers
+      });
+    }
+
+    return detailedResults;
+  }
+
+  // Get submission result for student
+  async getSubmissionResult(student_id, submission_id) {
+    try {
+      await this.init();
+
+      // Step 1: Get submission
+      const submission = await this.submissionRepository.findOne({
+        where: { id: submission_id },
+        relations: ['answers']
+      });
+
+      if (!submission) {
+        const error = new Error('Submission not found');
+        error.statusCode = 404;
+        throw error;
+      }
+
+      // Step 2: Security check - verify submission belongs to student
+      if (submission.student_id !== student_id) {
+        const error = new Error('Forbidden - This submission does not belong to you');
+        error.statusCode = 403;
+        throw error;
+      }
+
+      // Step 3: Get ClassQuiz and Quiz info
+      let classQuizResponse;
+      try {
+        classQuizResponse = await quizService('GET', `/class-quizzes/${submission.class_quiz_id}`, null, {
+          headers: {
+            'x-service-call': 'true'
+          }
+        });
+      } catch (error) {
+        throw new Error(`Failed to fetch ClassQuiz: ${error.message}`);
+      }
+
+      const classQuiz = classQuizResponse.data.data;
+      if (!classQuiz || !classQuiz.quiz_id) {
+        throw new Error('ClassQuiz or Quiz not found');
+      }
+
+      // Get Quiz details
+      let quizResponse;
+      try {
+        quizResponse = await quizService('GET', `/quizzes/${classQuiz.quiz_id}`, null, {
+          headers: {
+            'x-service-call': 'true'
+          }
+        });
+      } catch (error) {
+        throw new Error(`Failed to fetch Quiz: ${error.message}`);
+      }
+
+      const quiz = quizResponse.data.data;
+      if (!quiz || !quiz.questions || quiz.questions.length === 0) {
+        throw new Error('Quiz has no questions');
+      }
+
+      const questionIds = quiz.questions.map(q => q.id);
+
+      // Step 4: Get all question details with answers
+      const questionsMap = new Map();
+      const questionPromises = questionIds.map(async (question_id) => {
+        try {
+          const questionResponse = await questionService('GET', `/questions/internal/${question_id}`, null, {
+            headers: {
+              'x-service-call': 'true'
+            }
+          });
+          const questionData = questionResponse?.data?.data;
+
+          if (questionData) {
+            questionsMap.set(question_id, questionData);
+          }
+          return questionData;
+        } catch (error) {
+          console.error(`Failed to fetch question ${question_id}:`, error.message);
+          return null;
+        }
+      });
+
+      await Promise.all(questionPromises);
+
+      // Step 5: Build detailed results (use data from database, not recalculate)
+      const detailedResults = await this.buildDetailedResults(submission, questionIds, questionsMap);
+
+      return {
+        submission_id: submission.id,
+        student_id: submission.student_id,
+        quiz_name: quiz.name,
+        score: submission.score,
+        n_total_true: submission.n_total_true,
+        total_questions: questionIds.length,
+        submission_time: submission.submission_time,
+        detailed_results: detailedResults
+      };
+    } catch (error) {
+      throw error;
+    }
+  }
+
   // Grade a submission
   async gradeSubmission(submission_id) {
     try {
@@ -202,11 +434,19 @@ class SubmissionService {
       const { class_quiz_id, student_id, answers: submissionAnswers } = submission;
 
       console.log(`[Submission Service] Grading submission ${submission_id} for student ${student_id}`);
+      console.log(`[Submission Service] Submission answers count: ${submissionAnswers ? submissionAnswers.length : 0}`);
+      if (submissionAnswers && submissionAnswers.length > 0) {
+        console.log(`[Submission Service] First answer:`, submissionAnswers[0]);
+      }
 
       // Step 2: Get ClassQuiz and Quiz structure from Quiz Service
       let classQuizResponse;
       try {
-        classQuizResponse = await quizService('GET', `/class-quizzes/${class_quiz_id}`);
+        classQuizResponse = await quizService('GET', `/class-quizzes/${class_quiz_id}`, null, {
+          headers: {
+            'x-service-call': 'true'
+          }
+        });
       } catch (error) {
         throw new Error(`Failed to fetch ClassQuiz: ${error.message}`);
       }
@@ -219,7 +459,11 @@ class SubmissionService {
       // Get Quiz details with questions
       let quizResponse;
       try {
-        quizResponse = await quizService('GET', `/quizzes/${classQuiz.quiz_id}`);
+        quizResponse = await quizService('GET', `/quizzes/${classQuiz.quiz_id}`, null, {
+          headers: {
+            'x-service-call': 'true'
+          }
+        });
       } catch (error) {
         throw new Error(`Failed to fetch Quiz: ${error.message}`);
       }
@@ -229,20 +473,25 @@ class SubmissionService {
         throw new Error('Quiz has no questions');
       }
 
-      const questionIds = quiz.questions.map(q => q.question_id);
+      const questionIds = quiz.questions.map(q => q.id);
 
       // Step 3: Get correct answers for all questions
       console.log(`[Submission Service] Fetching correct answers for ${questionIds.length} questions`);
       
       const correctAnswersMap = new Map(); // question_id -> { type, correctAnswerIds: Set, score }
-      
+
       const questionPromises = questionIds.map(async (question_id) => {
         try {
-          const questionResponse = await questionService('GET', `/questions/internal/${question_id}`);
+          const questionResponse = await questionService('GET', `/questions/internal/${question_id}`, null, {
+            headers: {
+              'x-service-call': 'true'
+            }
+          });
+          console.log(`[Submission Service] Question response for ${question_id}:`, JSON.stringify(questionResponse.data, null, 2));
           const questionData = questionResponse.data.data;
-          
+
           if (!questionData) {
-            console.warn(`Question ${question_id} not found`);
+            console.warn(`Question ${question_id} not found. Full response:`, JSON.stringify(questionResponse.data, null, 2));
             return null;
           }
 
@@ -277,9 +526,9 @@ class SubmissionService {
         }
       });
 
+      console.log(`[Submission Service] Correct answers map:`, Array.from(correctAnswersMap.entries()).map(([qid, data]) => ({ qid, type: data.type, correctIds: Array.from(data.correctAnswerIds) })));
+
       // Step 4: Calculate score
-      let totalScore = 0;
-      let maxScore = 0;
       let nTotalTrue = 0;
 
       // Group submission answers by question_id
@@ -291,30 +540,36 @@ class SubmissionService {
         studentAnswersMap.get(ans.question_id).add(ans.selected_answer_id);
       });
 
+      console.log(`[Submission Service] Student answers map:`, Array.from(studentAnswersMap.entries()).map(([qid, aids]) => ({ qid, aids: Array.from(aids) })));
+
       // Grade each question
       for (const question_id of questionIds) {
         const correctData = correctAnswersMap.get(question_id);
-        
+
         if (!correctData) {
           console.warn(`No correct answer data for question ${question_id}, skipping`);
           continue;
         }
 
-        const { type, correctAnswerIds, score: questionScore } = correctData;
-        maxScore += questionScore;
+        const { type, correctAnswerIds } = correctData;
 
         const selectedAnswerIds = studentAnswersMap.get(question_id) || new Set();
 
+        console.log(`[Submission Service] Grading Q${question_id}: type=${type}, selected=${Array.from(selectedAnswerIds)}, correct=${Array.from(correctAnswerIds)}`);
+
         let isCorrect = false;
 
-        if (type === 1) {
+        // Convert type to string for comparison since it comes as string from database
+        const typeStr = String(type);
+
+        if (typeStr === '1') {
           // Single choice: student must select exactly 1 answer and it must be correct
           if (selectedAnswerIds.size === 1 && correctAnswerIds.size === 1) {
             const selectedId = Array.from(selectedAnswerIds)[0];
             const correctId = Array.from(correctAnswerIds)[0];
             isCorrect = selectedId === correctId;
           }
-        } else if (type === 2) {
+        } else if (typeStr === '2') {
           // Multiple choice: student must select ALL correct answers, no more, no less
           if (selectedAnswerIds.size === correctAnswerIds.size) {
             // Check if all selected answers are correct
@@ -322,31 +577,423 @@ class SubmissionService {
           }
         }
 
+        console.log(`[Submission Service] Q${question_id} result: isCorrect=${isCorrect}`);
+
         if (isCorrect) {
-          totalScore += questionScore;
           nTotalTrue += 1;
         }
       }
 
-      // Step 5: Update submission with score
-      submission.score = totalScore;
+      // Step 5: Calculate final score: (n_total_true / total_questions) * 10
+      const totalQuestions = questionIds.length;
+      const finalScore = totalQuestions > 0 ? (nTotalTrue / totalQuestions) * 10 : 0;
+
+      submission.score = finalScore;
       submission.n_total_true = nTotalTrue;
       submission.status = 'graded';
 
       await this.submissionRepository.save(submission);
 
-      console.log(`[Submission Service] Grading completed: ${nTotalTrue}/${questionIds.length} correct, Score: ${totalScore}/${maxScore}`);
+      console.log(`[Submission Service] Grading completed: ${nTotalTrue}/${totalQuestions} correct, Score: ${finalScore}/10`);
 
       return {
         submission_id: submission.id,
         student_id: submission.student_id,
         class_quiz_id: submission.class_quiz_id,
-        score: totalScore,
-        max_score: maxScore,
+        score: finalScore,
         n_total_true: nTotalTrue,
-        total_questions: questionIds.length,
+        total_questions: totalQuestions,
         status: 'graded',
         submission_time: submission.submission_time
+      };
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  // Get submissions by class quiz for teacher
+  async getSubmissionsByClassQuiz(teacher_id, class_quiz_id, pagination = {}) {
+    try {
+      await this.init();
+
+      const { page = 1, limit = 10 } = pagination;
+      const skip = (page - 1) * limit;
+
+      // Step 1: Get ClassQuiz and verify teacher ownership
+      let classQuizResponse;
+      try {
+        classQuizResponse = await quizService('GET', `/class-quizzes/${class_quiz_id}`, null, {
+          headers: {
+            'x-service-call': 'true'
+          }
+        });
+      } catch (error) {
+        throw new Error(`Failed to fetch ClassQuiz: ${error.message}`);
+      }
+
+      const classQuiz = classQuizResponse.data.data;
+      if (!classQuiz) {
+        const error = new Error('ClassQuiz not found');
+        error.statusCode = 404;
+        throw error;
+      }
+
+      // Verify teacher ownership
+      if (classQuiz.quiz.teacher_id !== teacher_id) {
+        const error = new Error('Forbidden - You do not have permission to view this quiz');
+        error.statusCode = 403;
+        throw error;
+      }
+
+      const class_id = classQuiz.class_id;
+
+      // Step 2: Get all students in the class
+      let classStudentsResponse;
+      try {
+        classStudentsResponse = await classService('GET', `/classes/${teacher_id}/${class_id}/students?status=1`, null, {
+          headers: {
+            'x-service-call': 'true'
+          }
+        });
+      } catch (error) {
+        throw new Error(`Failed to fetch class students: ${error.message}`);
+      }
+
+      const classStudents = classStudentsResponse.data.data?.students || [];
+
+      // Step 3: Get all submissions for this class_quiz
+      const submissions = await this.submissionRepository.find({
+        where: { class_quiz_id: class_quiz_id },
+        relations: ['answers']
+      });
+
+      // Step 4: Build result with all students (submitted and not submitted)
+      const submissionsMap = new Map();
+      submissions.forEach(sub => {
+        submissionsMap.set(sub.student_id, sub);
+      });
+
+      const result = classStudents.map(studentReg => {
+        const student = studentReg.student;
+        const submission = submissionsMap.get(studentReg.student_id);
+
+        if (submission) {
+          return {
+            submission_id: submission.id,
+            student: {
+              student_id: studentReg.student_id,
+              full_name: student?.full_name || 'Unknown',
+              student_code: student?.student_code || 'N/A'
+            },
+            status: submission.status,
+            score: submission.score,
+            submission_time: submission.submission_time
+          };
+        } else {
+          return {
+            submission_id: null,
+            student: {
+              student_id: studentReg.student_id,
+              full_name: student?.full_name || 'Unknown',
+              student_code: student?.student_code || 'N/A'
+            },
+            status: 'not_submitted',
+            score: null,
+            submission_time: null
+          };
+        }
+      });
+
+      // Apply pagination
+      const paginatedResult = result.slice(skip, skip + limit);
+
+      return {
+        data: paginatedResult,
+        pagination: {
+          current_page: parseInt(page),
+          items_per_page: parseInt(limit),
+          total_items: result.length,
+          total_pages: Math.ceil(result.length / limit)
+        }
+      };
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  // Get submission result for teacher
+  async getSubmissionResultForTeacher(teacher_id, submission_id) {
+    try {
+      await this.init();
+
+      // Step 1: Get submission
+      const submission = await this.submissionRepository.findOne({
+        where: { id: submission_id },
+        relations: ['answers']
+      });
+
+      if (!submission) {
+        const error = new Error('Submission not found');
+        error.statusCode = 404;
+        throw error;
+      }
+
+      // Step 2: Get ClassQuiz and verify teacher ownership
+      let classQuizResponse;
+      try {
+        classQuizResponse = await quizService('GET', `/class-quizzes/${submission.class_quiz_id}`, null, {
+          headers: {
+            'x-service-call': 'true'
+          }
+        });
+      } catch (error) {
+        throw new Error(`Failed to fetch ClassQuiz: ${error.message}`);
+      }
+
+      const classQuiz = classQuizResponse.data.data;
+      if (!classQuiz) {
+        throw new Error('ClassQuiz not found');
+      }
+
+      // Verify teacher ownership
+      if (classQuiz.quiz.teacher_id !== teacher_id) {
+        const error = new Error('Forbidden - You do not have permission to view this submission');
+        error.statusCode = 403;
+        throw error;
+      }
+
+      // Step 3: Get Quiz details
+      let quizResponse;
+      try {
+        quizResponse = await quizService('GET', `/quizzes/${classQuiz.quiz_id}`, null, {
+          headers: {
+            'x-service-call': 'true'
+          }
+        });
+      } catch (error) {
+        throw new Error(`Failed to fetch Quiz: ${error.message}`);
+      }
+
+      const quiz = quizResponse.data.data;
+      if (!quiz || !quiz.questions || quiz.questions.length === 0) {
+        throw new Error('Quiz has no questions');
+      }
+
+      const questionIds = quiz.questions.map(q => q.id);
+
+      // Step 4: Get all question details
+      const questionsMap = new Map();
+      const questionPromises = questionIds.map(async (question_id) => {
+        try {
+          const questionResponse = await questionService('GET', `/questions/internal/${question_id}`, null, {
+            headers: {
+              'x-service-call': 'true'
+            }
+          });
+          const questionData = questionResponse.data.data;
+
+          if (questionData) {
+            questionsMap.set(question_id, questionData);
+          }
+          return questionData;
+        } catch (error) {
+          console.error(`Failed to fetch question ${question_id}:`, error.message);
+          return null;
+        }
+      });
+
+      await Promise.all(questionPromises);
+
+      // Step 5: Build detailed results (use helper method)
+      const detailedResults = await this.buildDetailedResults(submission, questionIds, questionsMap);
+
+      return {
+        submission_id: submission.id,
+        student_id: submission.student_id,
+        quiz_name: quiz.name,
+        score: submission.score,
+        n_total_true: submission.n_total_true,
+        total_questions: questionIds.length,
+        submission_time: submission.submission_time,
+        detailed_results: detailedResults
+      };
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  // Get quiz statistics for teacher
+  async getQuizStatistics(teacher_id, class_quiz_id) {
+    try {
+      await this.init();
+
+      // Step 1: Get ClassQuiz and verify teacher ownership
+      let classQuizResponse;
+      try {
+        classQuizResponse = await quizService('GET', `/class-quizzes/${class_quiz_id}`, null, {
+          headers: {
+            'x-service-call': 'true'
+          }
+        });
+      } catch (error) {
+        throw new Error(`Failed to fetch ClassQuiz: ${error.message}`);
+      }
+
+      const classQuiz = classQuizResponse.data.data;
+      if (!classQuiz) {
+        const error = new Error('ClassQuiz not found');
+        error.statusCode = 404;
+        throw error;
+      }
+
+      // Verify teacher ownership
+      if (classQuiz.quiz.teacher_id !== teacher_id) {
+        const error = new Error('Forbidden - You do not have permission to view this quiz');
+        error.statusCode = 403;
+        throw error;
+      }
+
+      // Step 2: Get all graded submissions for this class_quiz
+      const submissions = await this.submissionRepository.find({
+        where: {
+          class_quiz_id: class_quiz_id,
+          status: 'graded'
+        },
+        relations: ['answers']
+      });
+
+      // Step 3: Calculate general statistics
+      const scores = submissions.map(s => s.score);
+      const totalSubmissions = submissions.length;
+      const averageScore = totalSubmissions > 0 ? scores.reduce((a, b) => a + b, 0) / totalSubmissions : 0;
+      const maxScore = totalSubmissions > 0 ? Math.max(...scores) : 0;
+      const minScore = totalSubmissions > 0 ? Math.min(...scores) : 0;
+
+      // Score distribution
+      const scoreDistribution = [
+        { range: '8-10', count: scores.filter(s => s >= 8 && s <= 10).length },
+        { range: '6-8', count: scores.filter(s => s > 6 && s < 8).length },
+        { range: '4-6', count: scores.filter(s => s > 4 && s <= 6).length },
+        { range: '0-4', count: scores.filter(s => s >= 0 && s <= 4).length }
+      ];
+
+      // Step 4: Get Quiz details
+      let quizResponse;
+      try {
+        quizResponse = await quizService('GET', `/quizzes/${classQuiz.quiz_id}`, null, {
+          headers: {
+            'x-service-call': 'true'
+          }
+        });
+      } catch (error) {
+        throw new Error(`Failed to fetch Quiz: ${error.message}`);
+      }
+
+      const quiz = quizResponse.data.data;
+      if (!quiz || !quiz.questions || quiz.questions.length === 0) {
+        throw new Error('Quiz has no questions');
+      }
+
+      const questionIds = quiz.questions.map(q => q.id);
+
+      // Step 5: Get all question details
+      const questionsMap = new Map();
+      const questionPromises = questionIds.map(async (question_id) => {
+        try {
+          const questionResponse = await questionService('GET', `/questions/internal/${question_id}`, null, {
+            headers: {
+              'x-service-call': 'true'
+            }
+          });
+          const questionData = questionResponse.data.data;
+
+          if (questionData) {
+            questionsMap.set(question_id, questionData);
+          }
+          return questionData;
+        } catch (error) {
+          console.error(`Failed to fetch question ${question_id}:`, error.message);
+          return null;
+        }
+      });
+
+      await Promise.all(questionPromises);
+
+      // Step 6: Calculate per-question statistics
+      const questionStatistics = [];
+
+      for (const question_id of questionIds) {
+        const questionData = questionsMap.get(question_id);
+        if (!questionData) {
+          console.warn(`Question ${question_id} not found, skipping`);
+          continue;
+        }
+
+        const correctAnswerIds = new Set(
+          questionData.answers
+            .filter(ans => ans.is_true === true)
+            .map(ans => ans.id)
+        );
+
+        // Count correct answers
+        let correctCount = 0;
+        const answerDistribution = new Map(); // answer_id -> count
+
+        for (const submission of submissions) {
+          const studentAnswersForQuestion = submission.answers.filter(a => a.question_id === question_id);
+          const selectedAnswerIds = new Set(studentAnswersForQuestion.map(a => a.selected_answer_id));
+
+          // Check if correct
+          let isCorrect = false;
+          if (questionData.type === 1) {
+            if (selectedAnswerIds.size === 1 && correctAnswerIds.size === 1) {
+              const selectedId = Array.from(selectedAnswerIds)[0];
+              const correctId = Array.from(correctAnswerIds)[0];
+              isCorrect = selectedId === correctId;
+            }
+          } else if (questionData.type === 2) {
+            if (selectedAnswerIds.size === correctAnswerIds.size) {
+              isCorrect = Array.from(selectedAnswerIds).every(id => correctAnswerIds.has(id));
+            }
+          }
+
+          if (isCorrect) {
+            correctCount += 1;
+          }
+
+          // Count answer selections
+          selectedAnswerIds.forEach(answerId => {
+            answerDistribution.set(answerId, (answerDistribution.get(answerId) || 0) + 1);
+          });
+        }
+
+        const percentCorrect = totalSubmissions > 0 ? correctCount / totalSubmissions : 0;
+
+        // Build answer distribution
+        const answerDist = questionData.answers.map(ans => ({
+          answer_id: ans.id,
+          content: ans.content,
+          is_correct: ans.is_true,
+          selected_count: answerDistribution.get(ans.id) || 0
+        }));
+
+        questionStatistics.push({
+          question_id: question_id,
+          content: questionData.content,
+          percent_correct: percentCorrect,
+          answer_distribution: answerDist
+        });
+      }
+
+      return {
+        general_statistics: {
+          total_submissions: totalSubmissions,
+          average_score: Math.round(averageScore * 100) / 100,
+          max_score: maxScore,
+          min_score: minScore,
+          score_distribution: scoreDistribution
+        },
+        question_statistics: questionStatistics
       };
     } catch (error) {
       throw error;
