@@ -14,6 +14,12 @@ router.get('/', questionController.getQuestions);
 router.post('/', questionController.createQuestion);
 
 /**
+ * GET /api/questions/internal/:id - Get question for internal service calls
+ * MUST be before /:id route to avoid being matched by the generic :id route
+ */
+router.get('/internal/:id', questionController.getQuestionByIdInternal);
+
+/**
  * GET /api/questions/:id - Get question details by ID
  */
 router.get('/:id', questionController.getQuestionById);
@@ -27,10 +33,5 @@ router.patch('/:id', questionController.updateQuestion);
  * DELETE /api/questions/:id - Delete a question
  */
 router.delete('/:id', questionController.deleteQuestion);
-
-/**
- * GET /api/questions/internal/:id - Get question for internal service calls
- */
-router.get('/internal/:id', questionController.getQuestionByIdInternal);
 
 module.exports = router;

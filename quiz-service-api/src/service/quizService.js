@@ -147,9 +147,10 @@ class QuizService {
    * Get quiz by ID with questions
    * @param {string} quiz_id - Quiz ID
    * @param {string} teacher_id - Teacher ID for authorization
+   * @param {boolean} isServiceCall - Whether this is a service-to-service call
    * @returns {Promise<Object>} Quiz with questions
    */
-  async getQuizById(quiz_id, teacher_id) {
+  async getQuizById(quiz_id, teacher_id, isServiceCall = false) {
     try {
       const quizRepository = AppDataSource.getRepository('Quiz');
       const quizQuestionRepository = AppDataSource.getRepository('QuizQuestion');
@@ -165,8 +166,8 @@ class QuizService {
         throw error;
       }
 
-      // Check if quiz belongs to teacher
-      if (quiz.teacher_id !== teacher_id) {
+      // Check if quiz belongs to teacher (skip for service-to-service calls)
+      if (!isServiceCall && quiz.teacher_id !== teacher_id) {
         const error = new Error('Forbidden resource');
         error.code = 'FORBIDDEN';
         throw error;
@@ -195,7 +196,7 @@ class QuizService {
               `/questions/internal/${questionId}`,
               null
             );
-            return response.data;
+            return response.data.data;
           } catch (error) {
             console.error(`Failed to fetch question ${questionId}:`, error.message);
             // Return null for failed questions instead of breaking the entire request
@@ -457,7 +458,7 @@ class QuizService {
                 `/questions/internal/${questionId}`,
                 null
               );
-              return response.data;
+              return response.data.data;
             } catch (error) {
               console.error(`Failed to fetch question ${questionId}:`, error.message);
               return null;

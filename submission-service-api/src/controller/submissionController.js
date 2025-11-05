@@ -100,6 +100,248 @@ class SubmissionController {
     }
   }
 
+  // Get submissions by class for student - GET /api/submissions/student/class/:class_id
+  // Role: Student
+  async getSubmissionsByClassForStudent(req, res) {
+    try {
+      const student_id = req.user?.user_id || req.headers['x-user-id'];
+      const { class_id } = req.params;
+
+      if (!student_id) {
+        return res.status(401).json({
+          success: false,
+          message: 'Student ID not found in token',
+          data: null
+        });
+      }
+
+      if (!class_id) {
+        return res.status(400).json({
+          success: false,
+          message: 'class_id is required',
+          data: null
+        });
+      }
+
+      const submissions = await submissionService.getSubmissionsByClassForStudent(student_id, class_id);
+
+      res.status(200).json({
+        success: true,
+        message: 'Submissions retrieved successfully',
+        data: submissions
+      });
+    } catch (error) {
+      console.error('Error getting submissions by class:', error.message);
+
+      let statusCode = 500;
+      if (error.statusCode === 403) {
+        statusCode = 403;
+      } else if (error.statusCode === 404) {
+        statusCode = 404;
+      }
+
+      res.status(statusCode).json({
+        success: false,
+        message: error.message,
+        data: null
+      });
+    }
+  }
+
+  // Get submission result for student - GET /api/submissions/:submission_id/result
+  // Role: Student
+  async getSubmissionResult(req, res) {
+    try {
+      const student_id = req.user?.user_id || req.headers['x-user-id'];
+      const { submission_id } = req.params;
+
+      if (!student_id) {
+        return res.status(401).json({
+          success: false,
+          message: 'Student ID not found in token',
+          data: null
+        });
+      }
+
+      if (!submission_id) {
+        return res.status(400).json({
+          success: false,
+          message: 'submission_id is required',
+          data: null
+        });
+      }
+
+      const result = await submissionService.getSubmissionResult(student_id, submission_id);
+
+      res.status(200).json({
+        success: true,
+        message: 'Submission result retrieved successfully',
+        data: result
+      });
+    } catch (error) {
+      console.error('Error getting submission result:', error.message);
+
+      let statusCode = 500;
+      if (error.statusCode === 403) {
+        statusCode = 403;
+      } else if (error.statusCode === 404) {
+        statusCode = 404;
+      }
+
+      res.status(statusCode).json({
+        success: false,
+        message: error.message,
+        data: null
+      });
+    }
+  }
+
+  // Get submissions by class quiz for teacher - GET /api/submissions/class-quiz/:class_quiz_id
+  // Role: Teacher
+  async getSubmissionsByClassQuiz(req, res) {
+    try {
+      const teacher_id = req.user?.user_id || req.headers['x-teacher-id'];
+      const { class_quiz_id } = req.params;
+      const { page = 1, limit = 10 } = req.query;
+
+      if (!teacher_id) {
+        return res.status(401).json({
+          success: false,
+          message: 'Teacher ID not found in token',
+          data: null
+        });
+      }
+
+      if (!class_quiz_id) {
+        return res.status(400).json({
+          success: false,
+          message: 'class_quiz_id is required',
+          data: null
+        });
+      }
+
+      const result = await submissionService.getSubmissionsByClassQuiz(teacher_id, class_quiz_id, { page, limit });
+
+      res.status(200).json({
+        success: true,
+        message: 'Submissions retrieved successfully',
+        data: result.data,
+        pagination: result.pagination
+      });
+    } catch (error) {
+      console.error('Error getting submissions by class quiz:', error.message);
+
+      let statusCode = 500;
+      if (error.statusCode === 403) {
+        statusCode = 403;
+      } else if (error.statusCode === 404) {
+        statusCode = 404;
+      }
+
+      res.status(statusCode).json({
+        success: false,
+        message: error.message,
+        data: null
+      });
+    }
+  }
+
+  // Get submission result for teacher - GET /api/submissions/:submission_id/teacher
+  // Role: Teacher
+  async getSubmissionResultForTeacher(req, res) {
+    try {
+      const teacher_id = req.user?.user_id || req.headers['x-teacher-id'];
+      const { submission_id } = req.params;
+
+      if (!teacher_id) {
+        return res.status(401).json({
+          success: false,
+          message: 'Teacher ID not found in token',
+          data: null
+        });
+      }
+
+      if (!submission_id) {
+        return res.status(400).json({
+          success: false,
+          message: 'submission_id is required',
+          data: null
+        });
+      }
+
+      const result = await submissionService.getSubmissionResultForTeacher(teacher_id, submission_id);
+
+      res.status(200).json({
+        success: true,
+        message: 'Submission result retrieved successfully',
+        data: result
+      });
+    } catch (error) {
+      console.error('Error getting submission result for teacher:', error.message);
+
+      let statusCode = 500;
+      if (error.statusCode === 403) {
+        statusCode = 403;
+      } else if (error.statusCode === 404) {
+        statusCode = 404;
+      }
+
+      res.status(statusCode).json({
+        success: false,
+        message: error.message,
+        data: null
+      });
+    }
+  }
+
+  // Get quiz statistics for teacher - GET /api/submissions/class-quiz/:class_quiz_id/statistics
+  // Role: Teacher
+  async getQuizStatistics(req, res) {
+    try {
+      const teacher_id = req.user?.user_id || req.headers['x-teacher-id'];
+      const { class_quiz_id } = req.params;
+
+      if (!teacher_id) {
+        return res.status(401).json({
+          success: false,
+          message: 'Teacher ID not found in token',
+          data: null
+        });
+      }
+
+      if (!class_quiz_id) {
+        return res.status(400).json({
+          success: false,
+          message: 'class_quiz_id is required',
+          data: null
+        });
+      }
+
+      const result = await submissionService.getQuizStatistics(teacher_id, class_quiz_id);
+
+      res.status(200).json({
+        success: true,
+        message: 'Quiz statistics retrieved successfully',
+        data: result
+      });
+    } catch (error) {
+      console.error('Error getting quiz statistics:', error.message);
+
+      let statusCode = 500;
+      if (error.statusCode === 403) {
+        statusCode = 403;
+      } else if (error.statusCode === 404) {
+        statusCode = 404;
+      }
+
+      res.status(statusCode).json({
+        success: false,
+        message: error.message,
+        data: null
+      });
+    }
+  }
+
   // Grade a submission - POST /api/submissions/:submission_id/grade
   // Internal API - typically called after submission creation or by background job
   async gradeSubmission(req, res) {
@@ -115,7 +357,7 @@ class SubmissionController {
       }
 
       const result = await submissionService.gradeSubmission(submission_id);
-      
+
       res.status(200).json({
         success: true,
         message: 'Submission graded successfully',
@@ -123,7 +365,7 @@ class SubmissionController {
       });
     } catch (error) {
       console.error('Error grading submission:', error.message);
-      
+
       let statusCode = 500;
       if (error.statusCode === 404) {
         statusCode = 404;
@@ -132,7 +374,7 @@ class SubmissionController {
       } else if (error.message.includes('not found') || error.message.includes('no questions')) {
         statusCode = 400;
       }
-      
+
       res.status(statusCode).json({
         success: false,
         message: error.message,

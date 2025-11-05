@@ -730,15 +730,19 @@ class QuestionController {
 
       const question = await questionService.getQuestionByIdInternal(id);
 
-      return res.status(200).json(question);
+      return res.status(200).json({
+        success: true,
+        message: 'Question retrieved successfully',
+        data: question
+      });
     } catch (error) {
       console.error('Error in getQuestionByIdInternal:', error);
 
       if (error.code === 'NOT_FOUND') {
         return res.status(404).json({
-          statusCode: 404,
+          success: false,
           message: error.message,
-          error: 'Not Found'
+          data: null
         });
       }
 

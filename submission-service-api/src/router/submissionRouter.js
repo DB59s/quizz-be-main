@@ -173,6 +173,146 @@ router.post('/', submissionController.createSubmission.bind(submissionController
 
 /**
  * @swagger
+ * /submissions/student/class/{class_id}:
+ *   get:
+ *     summary: Get submissions by class for student
+ *     description: Retrieve all submissions of a student in a specific class
+ *     tags: [Submissions]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: class_id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID of the class
+ *     responses:
+ *       200:
+ *         description: Submissions retrieved successfully
+ *       403:
+ *         description: Forbidden - Student not enrolled in class
+ *       404:
+ *         description: Class not found
+ */
+router.get('/student/class/:class_id', submissionController.getSubmissionsByClassForStudent.bind(submissionController));
+
+/**
+ * @swagger
+ * /submissions/{submission_id}/result:
+ *   get:
+ *     summary: Get submission result for student
+ *     description: Retrieve detailed result of a submission for a student
+ *     tags: [Submissions]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: submission_id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Submission result retrieved successfully
+ *       403:
+ *         description: Forbidden - Submission does not belong to student
+ *       404:
+ *         description: Submission not found
+ */
+router.get('/:submission_id/result', submissionController.getSubmissionResult.bind(submissionController));
+
+/**
+ * @swagger
+ * /submissions/class-quiz/{class_quiz_id}:
+ *   get:
+ *     summary: Get submissions by class quiz for teacher
+ *     description: Retrieve all submissions for a specific class quiz
+ *     tags: [Submissions]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: class_quiz_id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *     responses:
+ *       200:
+ *         description: Submissions retrieved successfully
+ *       403:
+ *         description: Forbidden - Teacher does not own this quiz
+ *       404:
+ *         description: ClassQuiz not found
+ */
+router.get('/class-quiz/:class_quiz_id', submissionController.getSubmissionsByClassQuiz.bind(submissionController));
+
+/**
+ * @swagger
+ * /submissions/{submission_id}/teacher:
+ *   get:
+ *     summary: Get submission result for teacher
+ *     description: Retrieve detailed result of a submission for a teacher
+ *     tags: [Submissions]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: submission_id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Submission result retrieved successfully
+ *       403:
+ *         description: Forbidden - Teacher does not own this quiz
+ *       404:
+ *         description: Submission not found
+ */
+router.get('/:submission_id/teacher', submissionController.getSubmissionResultForTeacher.bind(submissionController));
+
+/**
+ * @swagger
+ * /submissions/class-quiz/{class_quiz_id}/statistics:
+ *   get:
+ *     summary: Get quiz statistics for teacher
+ *     description: Retrieve statistics for a specific class quiz
+ *     tags: [Submissions]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: class_quiz_id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Quiz statistics retrieved successfully
+ *       403:
+ *         description: Forbidden - Teacher does not own this quiz
+ *       404:
+ *         description: ClassQuiz not found
+ */
+router.get('/class-quiz/:class_quiz_id/statistics', submissionController.getQuizStatistics.bind(submissionController));
+
+/**
+ * @swagger
  * /submissions/{submission_id}/grade:
  *   post:
  *     summary: Grade a submission (Internal API)
