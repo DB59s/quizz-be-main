@@ -753,6 +753,39 @@ class QuestionController {
       });
     }
   }
+
+  /**
+   * Get total number of questions for a teacher
+   * GET /api/questions/teacher/:teacher_id/count
+   */
+  async getTeacherQuestionsCount(req, res) {
+    try {
+      const { teacher_id } = req.params;
+
+      if (!teacher_id) {
+        return res.status(400).json({
+          success: false,
+          message: 'teacher_id is required',
+          data: null
+        });
+      }
+
+      const count = await questionService.getTeacherQuestionsCount(teacher_id);
+
+      return res.status(200).json({
+        success: true,
+        message: 'Total questions count retrieved successfully',
+        data: { count }
+      });
+    } catch (error) {
+      console.error('Error getting teacher questions count:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to get questions count',
+        data: null
+      });
+    }
+  }
 }
 
 module.exports = new QuestionController();

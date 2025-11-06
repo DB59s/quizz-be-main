@@ -2,6 +2,23 @@ const { AppDataSource, env } = require('../config');
 const { createServiceCaller } = require('../utils/serviceHelper');
 
 /**
+ * Parse datetime string as Vietnam time (UTC+7)
+ * @param {string} dateTimeStr - DateTime string without timezone (e.g., "2025-11-06T09:11")
+ * @returns {Date} Date object in UTC
+ */
+function parseAsVietnamTime(dateTimeStr) {
+  // If the string already has timezone info, use it as is
+  if (dateTimeStr.includes('Z') || dateTimeStr.includes('+') || dateTimeStr.includes('-')) {
+    return new Date(dateTimeStr);
+  }
+
+  // Otherwise, treat it as Vietnam time (UTC+7) and convert to UTC
+  // Add +07:00 to indicate Vietnam timezone
+  const vietnamTimeStr = dateTimeStr + '+07:00';
+  return new Date(vietnamTimeStr);
+}
+
+/**
  * Service for ClassQuiz operations
  */
 class ClassQuizService {
@@ -38,9 +55,9 @@ class ClassQuizService {
         throw error;
       }
 
-      // Validate time range
-      const startDate = new Date(start_time);
-      const endDate = new Date(end_time);
+      // Validate time range - parse as Vietnam time (UTC+7)
+      const startDate = parseAsVietnamTime(start_time);
+      const endDate = parseAsVietnamTime(end_time);
 
       if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
         const error = new Error('Invalid date format');
@@ -142,9 +159,9 @@ class ClassQuizService {
         throw error;
       }
 
-      // Update times if provided
+      // Update times if provided - parse as Vietnam time (UTC+7)
       if (updateData.start_time) {
-        const startDate = new Date(updateData.start_time);
+        const startDate = parseAsVietnamTime(updateData.start_time);
         if (isNaN(startDate.getTime())) {
           const error = new Error('Invalid start_time format');
           error.code = 'INVALID_DATE';
@@ -154,7 +171,7 @@ class ClassQuizService {
       }
 
       if (updateData.end_time) {
-        const endDate = new Date(updateData.end_time);
+        const endDate = parseAsVietnamTime(updateData.end_time);
         if (isNaN(endDate.getTime())) {
           const error = new Error('Invalid end_time format');
           error.code = 'INVALID_DATE';
@@ -487,6 +504,56 @@ class ClassQuizService {
       return 'ended';
     } else {
       return 'active';
+    }
+  }
+
+  /**
+   * Get upcoming quizzes count for a student
+   * @param {string} student_id - Student ID
+   * @returns {Promise<number>} Count of upcoming quizzes
+   */
+  async getUpcomingQuizzesCount(student_id) {
+    try {
+      // Call class-service to get all classes the student is enrolled in
+      const callClassService = createServiceCaller(
+        env.CLASS_SERVICE_BASE_URL,
+        env.CLASS_SERVICE_API_TOKEN
+      );
+
+      const classesResponse = await callClassService(
+        `/api/v1/student-classes/${student_id}`,
+        'GET'
+      );
+
+      if (!classesResponse.success || !classesResponse.data) {
+        return 0;
+      }
+
+      // Get approved class IDs
+      const approvedClasses = classesResponse.data.classes.filter(
+        c => c.status === 'approved'
+      );
+      const classIds = approvedClasses.map(c => c.class_id);
+
+      if (classIds.length === 0) {
+        return 0;
+      }
+
+      // Count upcoming quizzes in these classes
+      const classQuizRepository = AppDataSource.getRepository('ClassQuiz');
+      const now = new Date();
+
+      const count = await classQuizRepository
+        .createQueryBuilder('classQuiz')
+        .where('classQuiz.class_id IN (:...classIds)', { classIds })
+        .andWhere('classQuiz.start_time > :now', { now })
+        .getCount();
+
+      return count;
+    } catch (error) {
+      console.error('Error getting upcoming quizzes count:', error);
+      // Return 0 instead of throwing to prevent dashboard from failing
+      return 0;
     }
   }
 }

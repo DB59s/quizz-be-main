@@ -383,6 +383,105 @@ class SubmissionController {
     }
   }
 
+  /**
+   * Get score distribution for teacher's quizzes
+   * GET /api/submissions/teacher/:teacher_id/score-distribution
+   */
+  async getTeacherScoreDistribution(req, res) {
+    try {
+      const { teacher_id } = req.params;
+
+      if (!teacher_id) {
+        return res.status(400).json({
+          success: false,
+          message: 'teacher_id is required',
+          data: null
+        });
+      }
+
+      const distribution = await submissionService.getTeacherScoreDistribution(teacher_id);
+
+      return res.status(200).json({
+        success: true,
+        message: 'Score distribution retrieved successfully',
+        data: distribution
+      });
+    } catch (error) {
+      console.error('Error getting teacher score distribution:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to get score distribution',
+        data: null
+      });
+    }
+  }
+
+  /**
+   * Get submission summary for student
+   * GET /api/submissions/student/:student_id/summary
+   */
+  async getStudentSubmissionSummary(req, res) {
+    try {
+      const { student_id } = req.params;
+
+      if (!student_id) {
+        return res.status(400).json({
+          success: false,
+          message: 'student_id is required',
+          data: null
+        });
+      }
+
+      const summary = await submissionService.getStudentSubmissionSummary(student_id);
+
+      return res.status(200).json({
+        success: true,
+        message: 'Submission summary retrieved successfully',
+        data: summary
+      });
+    } catch (error) {
+      console.error('Error getting student submission summary:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to get submission summary',
+        data: null
+      });
+    }
+  }
+
+  /**
+   * Get progress chart for student
+   * GET /api/submissions/student/:student_id/progress
+   */
+  async getStudentProgress(req, res) {
+    try {
+      const { student_id } = req.params;
+
+      if (!student_id) {
+        return res.status(400).json({
+          success: false,
+          message: 'student_id is required',
+          data: null
+        });
+      }
+
+      const progress = await submissionService.getStudentProgress(student_id);
+
+      return res.status(200).json({
+        success: true,
+        message: 'Student progress retrieved successfully',
+        data: progress
+      });
+    } catch (error) {
+      console.error('Error getting student progress:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to get student progress',
+        data: null
+      });
+    }
+  }
+
 }
 
 module.exports = new SubmissionController();

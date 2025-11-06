@@ -586,6 +586,42 @@ const checkStudentInClass = async (req, res) => {
   }
 };
 
+/**
+ * Get total number of approved classes for a student
+ * GET /api/student-classes/student/:student_id/count
+ */
+const getStudentClassesCount = async (req, res) => {
+  try {
+    const { student_id } = req.params;
+
+    if (!student_id) {
+      return res.status(400).json({
+        success: false,
+        message: 'student_id is required',
+        data: null
+      });
+    }
+
+    const count = await StudentClass.countDocuments({
+      student_id,
+      status: STUDENT_CLASS_STATUS.APPROVED
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: 'Total classes count retrieved successfully',
+      data: { count }
+    });
+  } catch (error) {
+    console.error('Get student classes count error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to get classes count',
+      data: null
+    });
+  }
+};
+
 module.exports = {
   registerClass,
   getStudentClasses,
@@ -593,5 +629,6 @@ module.exports = {
   approveStudent,
   rejectStudent,
   removeStudent,
-  checkStudentInClass
+  checkStudentInClass,
+  getStudentClassesCount
 };

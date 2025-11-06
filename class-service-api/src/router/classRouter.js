@@ -7,7 +7,9 @@ const {
   getClassDetails,
   getClassByCode,
   getClassStudents,
-  getClassDetailsForStudent
+  getClassDetailsForStudent,
+  getTeacherClassesCount,
+  getTeacherStudentsCount
 } = require('../controller/classController');
 
 const router = express.Router();
@@ -410,5 +412,51 @@ router.get('/:teacher_id/:class_id/students', getClassStudents);
  *         description: Server error
  */
 router.get('/student/:class_id', getClassDetailsForStudent);
+
+/**
+ * @swagger
+ * /api/v1/classes/teacher/{teacher_id}/count:
+ *   get:
+ *     summary: Get total number of classes for a teacher
+ *     tags: [Classes]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: teacher_id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Teacher ID
+ *     responses:
+ *       200:
+ *         description: Total classes count retrieved successfully
+ *       500:
+ *         description: Server error
+ */
+router.get('/teacher/:teacher_id/count', getTeacherClassesCount);
+
+/**
+ * @swagger
+ * /api/v1/classes/teacher/{teacher_id}/students/count:
+ *   get:
+ *     summary: Get total number of approved students across all classes of a teacher
+ *     tags: [Classes]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: teacher_id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Teacher ID
+ *     responses:
+ *       200:
+ *         description: Total students count retrieved successfully
+ *       500:
+ *         description: Server error
+ */
+router.get('/teacher/:teacher_id/students/count', getTeacherStudentsCount);
 
 module.exports = router;

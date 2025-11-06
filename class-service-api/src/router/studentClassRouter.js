@@ -6,7 +6,8 @@ const {
   approveStudent,
   rejectStudent,
   removeStudent,
-  checkStudentInClass
+  checkStudentInClass,
+  getStudentClassesCount
 } = require('../controller/studentClassController');
 
 const router = express.Router();
@@ -293,5 +294,28 @@ router.delete('/:_id/remove', removeStudent);
  *         description: Server error
  */
 router.get('/check/:student_id/:class_id', checkStudentInClass);
+
+/**
+ * @swagger
+ * /api/v1/student-classes/student/{student_id}/count:
+ *   get:
+ *     summary: Get total number of approved classes for a student
+ *     tags: [Student Classes]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: student_id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Student ID
+ *     responses:
+ *       200:
+ *         description: Total classes count retrieved successfully
+ *       500:
+ *         description: Server error
+ */
+router.get('/student/:student_id/count', getStudentClassesCount);
 
 module.exports = router;
