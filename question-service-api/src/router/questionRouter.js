@@ -14,6 +14,12 @@ router.get('/', questionController.getQuestions);
 router.post('/', questionController.createQuestion);
 
 /**
+ * GET /api/questions/teacher/:teacher_id/count - Get total questions count for teacher
+ * MUST be before /:id route to avoid being matched by the generic :id route
+ */
+router.get('/teacher/:teacher_id/count', questionController.getTeacherQuestionsCount);
+
+/**
  * GET /api/questions/internal/:id - Get question for internal service calls
  * MUST be before /:id route to avoid being matched by the generic :id route
  */

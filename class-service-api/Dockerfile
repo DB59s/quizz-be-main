@@ -1,8 +1,9 @@
 # Use Node.js 18 Alpine base image
 FROM node:18-alpine
 
-# Install curl for health checks
-RUN apk add --no-cache curl
+# Set timezone to Vietnam (UTC+7)
+RUN apk add --no-cache curl tzdata
+ENV TZ=Asia/Ho_Chi_Minh
 
 # Set working directory
 WORKDIR /app

@@ -1000,6 +1000,177 @@ class SubmissionService {
     }
   }
 
+  /**
+   * Get score distribution for teacher's quizzes
+   * @param {string} teacher_id - Teacher ID
+   * @returns {Promise<Array>} Score distribution array
+   */
+  async getTeacherScoreDistribution(teacher_id) {
+    try {
+      await this.init();
+
+      // Get all quizzes of the teacher from quiz-service
+      const quizzesResponse = await quizService('GET', `/quizzes?teacher_id=${teacher_id}`);
+
+      if (!quizzesResponse.success || !quizzesResponse.data || quizzesResponse.data.length === 0) {
+        // No quizzes, return empty distribution
+        return [
+          { range: '0-4 (Yếu)', count: 0 },
+          { range: '4-6 (Trung bình)', count: 0 },
+          { range: '6-8 (Khá)', count: 0 },
+          { range: '8-10 (Giỏi)', count: 0 }
+        ];
+      }
+
+      const quizIds = quizzesResponse.data.map(q => q.id);
+
+      // Get all submissions and filter by checking if their class_quiz belongs to teacher's quizzes
+      // We'll need to check each submission's class_quiz
+      const allSubmissions = await this.submissionRepository
+        .createQueryBuilder('submission')
+        .where('submission.status = :status', { status: 'graded' })
+        .andWhere('submission.score IS NOT NULL')
+        .getMany();
+
+      // Filter submissions that belong to teacher's quizzes
+      const teacherSubmissions = [];
+      for (const submission of allSubmissions) {
+        try {
+          const classQuizResponse = await quizService('GET', `/class-quizzes/${submission.class_quiz_id}`);
+          if (classQuizResponse.success && classQuizResponse.data) {
+            const quizzId = classQuizResponse.data.quizz_id;
+            if (quizIds.includes(quizzId)) {
+              teacherSubmissions.push(submission);
+            }
+          }
+        } catch (error) {
+          // Skip this submission if we can't fetch class quiz info
+          console.error(`Error fetching class quiz ${submission.class_quiz_id}:`, error);
+        }
+      }
+
+      // Group by score ranges
+      const distribution = {
+        '0-4 (Yếu)': 0,
+        '4-6 (Trung bình)': 0,
+        '6-8 (Khá)': 0,
+        '8-10 (Giỏi)': 0
+      };
+
+      teacherSubmissions.forEach(sub => {
+        const score = sub.score;
+        if (score < 4) {
+          distribution['0-4 (Yếu)']++;
+        } else if (score < 6) {
+          distribution['4-6 (Trung bình)']++;
+        } else if (score < 8) {
+          distribution['6-8 (Khá)']++;
+        } else {
+          distribution['8-10 (Giỏi)']++;
+        }
+      });
+
+      return [
+        { range: '0-4 (Yếu)', count: distribution['0-4 (Yếu)'] },
+        { range: '4-6 (Trung bình)', count: distribution['4-6 (Trung bình)'] },
+        { range: '6-8 (Khá)', count: distribution['6-8 (Khá)'] },
+        { range: '8-10 (Giỏi)', count: distribution['8-10 (Giỏi)'] }
+      ];
+    } catch (error) {
+      console.error('Error getting teacher score distribution:', error);
+      // Return empty distribution on error
+      return [
+        { range: '0-4 (Yếu)', count: 0 },
+        { range: '4-6 (Trung bình)', count: 0 },
+        { range: '6-8 (Khá)', count: 0 },
+        { range: '8-10 (Giỏi)', count: 0 }
+      ];
+    }
+  }
+
+  /**
+   * Get submission summary for student
+   * @param {string} student_id - Student ID
+   * @returns {Promise<Object>} Summary with total_submissions and average_score
+   */
+  async getStudentSubmissionSummary(student_id) {
+    try {
+      await this.init();
+
+      const submissions = await this.submissionRepository.find({
+        where: { student_id }
+      });
+
+      const gradedSubmissions = submissions.filter(s => s.status === 'graded' && s.score !== null);
+
+      const totalSubmissions = submissions.length;
+      const averageScore = gradedSubmissions.length > 0
+        ? gradedSubmissions.reduce((sum, s) => sum + s.score, 0) / gradedSubmissions.length
+        : 0;
+
+      return {
+        total_submissions: totalSubmissions,
+        average_score: Math.round(averageScore * 100) / 100
+      };
+    } catch (error) {
+      console.error('Error getting student submission summary:', error);
+      return {
+        total_submissions: 0,
+        average_score: 0
+      };
+    }
+  }
+
+  /**
+   * Get progress chart for student
+   * @param {string} student_id - Student ID
+   * @returns {Promise<Array>} Array of {quiz_name, score, date}
+   */
+  async getStudentProgress(student_id) {
+    try {
+      await this.init();
+
+      const submissions = await this.submissionRepository
+        .createQueryBuilder('submission')
+        .where('submission.student_id = :student_id', { student_id })
+        .andWhere('submission.status = :status', { status: 'graded' })
+        .andWhere('submission.score IS NOT NULL')
+        .orderBy('submission.submission_time', 'ASC')
+        .getMany();
+
+      const progress = [];
+
+      for (const submission of submissions) {
+        try {
+          // Get ClassQuiz info
+          const classQuizResponse = await quizService('GET', `/class-quizzes/${submission.class_quiz_id}`);
+
+          if (classQuizResponse.success && classQuizResponse.data) {
+            const quizId = classQuizResponse.data.quizz_id;
+
+            // Get Quiz info
+            const quizResponse = await quizService('GET', `/quizzes/${quizId}`);
+
+            if (quizResponse.success && quizResponse.data) {
+              progress.push({
+                quiz_name: quizResponse.data.name,
+                score: Math.round(submission.score * 100) / 100,
+                date: submission.submission_time.toISOString().split('T')[0]
+              });
+            }
+          }
+        } catch (error) {
+          console.error(`Error fetching quiz info for submission ${submission.id}:`, error);
+        }
+      }
+
+      return progress;
+    } catch (error) {
+      console.error('Error getting student progress:', error);
+      return [];
+    }
+  }
+
 }
 
 module.exports = new SubmissionService();

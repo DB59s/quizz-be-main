@@ -38,4 +38,9 @@ router.get('/class/:class_id/student', classQuizController.getAvailableQuizzesFo
  */
 router.get('/:id', classQuizController.getClassQuizById);
 
+/**
+ * GET /api/class-quizzes/student/:student_id/upcoming/count - Get upcoming quizzes count for student
+ */
+router.get('/student/:student_id/upcoming/count', classQuizController.getUpcomingQuizzesCount);
+
 module.exports = router;

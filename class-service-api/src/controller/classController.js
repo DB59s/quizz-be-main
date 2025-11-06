@@ -642,6 +642,80 @@ const getClassDetailsForStudent = async (req, res) => {
   }
 };
 
+/**
+ * Get total number of classes for a teacher
+ * GET /api/classes/teacher/:teacher_id/count
+ */
+const getTeacherClassesCount = async (req, res) => {
+  try {
+    const { teacher_id } = req.params;
+
+    if (!teacher_id) {
+      return res.status(400).json({
+        success: false,
+        message: 'teacher_id is required',
+        data: null
+      });
+    }
+
+    const count = await Class.countDocuments({ teacher_id });
+
+    return res.status(200).json({
+      success: true,
+      message: 'Total classes count retrieved successfully',
+      data: { count }
+    });
+  } catch (error) {
+    console.error('Get teacher classes count error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to get classes count',
+      data: null
+    });
+  }
+};
+
+/**
+ * Get total number of approved students across all classes of a teacher
+ * GET /api/classes/teacher/:teacher_id/students/count
+ */
+const getTeacherStudentsCount = async (req, res) => {
+  try {
+    const { teacher_id } = req.params;
+
+    if (!teacher_id) {
+      return res.status(400).json({
+        success: false,
+        message: 'teacher_id is required',
+        data: null
+      });
+    }
+
+    // Get all classes of the teacher
+    const classes = await Class.find({ teacher_id }).select('_id');
+    const classIds = classes.map(c => c._id);
+
+    // Count approved students in all these classes
+    const count = await StudentClass.countDocuments({
+      class_id: { $in: classIds },
+      status: STUDENT_CLASS_STATUS.APPROVED
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: 'Total students count retrieved successfully',
+      data: { count }
+    });
+  } catch (error) {
+    console.error('Get teacher students count error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to get students count',
+      data: null
+    });
+  }
+};
+
 module.exports = {
   createClass,
   getClassesByTeacher,
@@ -650,5 +724,7 @@ module.exports = {
   getClassDetails,
   getClassByCode,
   getClassStudents,
-  getClassDetailsForStudent
+  getClassDetailsForStudent,
+  getTeacherClassesCount,
+  getTeacherStudentsCount
 };

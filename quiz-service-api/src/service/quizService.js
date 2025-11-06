@@ -490,6 +490,24 @@ class QuizService {
       throw error;
     }
   }
+
+  /**
+   * Get total number of quizzes for a teacher
+   * @param {string} teacher_id - Teacher ID
+   * @returns {Promise<number>} Total count of quizzes
+   */
+  async getTeacherQuizzesCount(teacher_id) {
+    try {
+      const quizRepository = AppDataSource.getRepository('Quiz');
+      const count = await quizRepository.count({
+        where: { teacher_id }
+      });
+      return count;
+    } catch (error) {
+      console.error('Error getting teacher quizzes count:', error);
+      throw error;
+    }
+  }
 }
 
 module.exports = new QuizService();

@@ -376,6 +376,38 @@ class ClassQuizController {
       });
     }
   }
+
+  /**
+   * Get upcoming quizzes count for a student
+   * GET /api/class-quizzes/student/:student_id/upcoming/count
+   */
+  async getUpcomingQuizzesCount(req, res) {
+    try {
+      const { student_id } = req.params;
+
+      if (!student_id) {
+        return res.status(400).json({
+          success: false,
+          message: 'student_id is required'
+        });
+      }
+
+      const count = await classQuizService.getUpcomingQuizzesCount(student_id);
+
+      return res.status(200).json({
+        success: true,
+        message: 'Upcoming quizzes count retrieved successfully',
+        data: { count }
+      });
+    } catch (error) {
+      console.error('Error getting upcoming quizzes count:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to get upcoming quizzes count',
+        error: error.message
+      });
+    }
+  }
 }
 
 module.exports = new ClassQuizController();

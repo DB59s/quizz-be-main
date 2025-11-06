@@ -4,8 +4,9 @@ FROM node:18-alpine
 # Build argument to bust cache
 ARG CACHEBUST=1
 
-# Install curl for health checks
-RUN apk add --no-cache curl
+# Set timezone to Vietnam (UTC+7)
+RUN apk add --no-cache curl tzdata
+ENV TZ=Asia/Ho_Chi_Minh
 
 # Set working directory
 WORKDIR /app

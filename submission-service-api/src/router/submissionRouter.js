@@ -398,5 +398,65 @@ router.get('/class-quiz/:class_quiz_id/statistics', submissionController.getQuiz
  */
 router.post('/:submission_id/grade', submissionController.gradeSubmission.bind(submissionController));
 
+/**
+ * @swagger
+ * /submissions/teacher/{teacher_id}/score-distribution:
+ *   get:
+ *     summary: Get score distribution for teacher's quizzes
+ *     tags: [Submissions]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: teacher_id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Score distribution retrieved successfully
+ */
+router.get('/teacher/:teacher_id/score-distribution', submissionController.getTeacherScoreDistribution.bind(submissionController));
+
+/**
+ * @swagger
+ * /submissions/student/{student_id}/summary:
+ *   get:
+ *     summary: Get submission summary for student
+ *     tags: [Submissions]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: student_id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Submission summary retrieved successfully
+ */
+router.get('/student/:student_id/summary', submissionController.getStudentSubmissionSummary.bind(submissionController));
+
+/**
+ * @swagger
+ * /submissions/student/{student_id}/progress:
+ *   get:
+ *     summary: Get progress chart for student
+ *     tags: [Submissions]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: student_id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Student progress retrieved successfully
+ */
+router.get('/student/:student_id/progress', submissionController.getStudentProgress.bind(submissionController));
+
 
 module.exports = router;

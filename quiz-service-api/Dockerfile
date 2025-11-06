@@ -1,6 +1,10 @@
 # Use Node.js LTS version
 FROM node:18-alpine
 
+# Set timezone to Vietnam (UTC+7)
+RUN apk add --no-cache tzdata
+ENV TZ=Asia/Ho_Chi_Minh
+
 # Set working directory
 WORKDIR /app
 

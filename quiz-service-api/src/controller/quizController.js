@@ -489,6 +489,38 @@ class QuizController {
       });
     }
   }
+
+  /**
+   * Get total number of quizzes for a teacher
+   * GET /quizzes/teacher/:teacher_id/count
+   */
+  async getTeacherQuizzesCount(req, res) {
+    try {
+      const { teacher_id } = req.params;
+
+      if (!teacher_id) {
+        return res.status(400).json({
+          success: false,
+          message: 'teacher_id is required'
+        });
+      }
+
+      const count = await quizService.getTeacherQuizzesCount(teacher_id);
+
+      return res.status(200).json({
+        success: true,
+        message: 'Total quizzes count retrieved successfully',
+        data: { count }
+      });
+    } catch (error) {
+      console.error('Error getting teacher quizzes count:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to get quizzes count',
+        error: error.message
+      });
+    }
+  }
 }
 
 module.exports = new QuizController();

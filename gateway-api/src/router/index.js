@@ -9,6 +9,7 @@ const questionRouter = require('./question.router');
 const quizRouter = require('./quiz.router');
 const classQuizRouter = require('./classQuiz.router');
 const submissionRouter = require('./submission.router');
+const dashboardRouter = require('./dashboard.router');
 
 const router = express.Router();
 
@@ -30,6 +31,7 @@ router.use('/questions', questionRouter);
 router.use('/quizzes', quizRouter);
 router.use('/class-quizzes', classQuizRouter);
 router.use('/submissions', submissionRouter);
+router.use('/dashboard', dashboardRouter);
 
 /**
  * @swagger

@@ -33,4 +33,9 @@ router.delete('/:id', quizController.deleteQuiz);
  */
 router.get('/:id/student', quizController.getQuizForStudent);
 
+/**
+ * GET /api/quizzes/teacher/:teacher_id/count - Get total quizzes count for teacher
+ */
+router.get('/teacher/:teacher_id/count', quizController.getTeacherQuizzesCount);
+
 module.exports = router;
