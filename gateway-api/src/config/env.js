@@ -38,6 +38,7 @@ module.exports = {
   CLASS_SERVICE_BASEURL: process.env.CLASS_SERVICE_BASEURL || 'http://localhost:3002',
   QUESTION_SERVICE_BASEURL: process.env.QUESTION_SERVICE_BASEURL || 'http://localhost:3003',
   QUIZ_SERVICE_BASEURL: process.env.QUIZ_SERVICE_BASEURL || 'http://localhost:9010/api/v1',
+  CHATBOT_SERVICE_BASEURL: process.env.CHATBOT_SERVICE_BASEURL || 'http://localhost:9012/api/v1',
 
   // Service API Tokens
   USER_SERVICE_API_TOKEN: process.env.USER_SERVICE_API_TOKEN || 'user_service_secret_token_2024',
