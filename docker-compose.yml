@@ -93,6 +93,29 @@ services:
       interval: 3s
       start_period: 45s
 
+  # PostgreSQL Database for Chatbot Service API
+  quiz_postgres_chatbot:
+    image: postgres:15
+    container_name: quiz_postgres_chatbot
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: chatbot_user
+      POSTGRES_PASSWORD: chatbot_password
+      POSTGRES_DB: chatbot_db
+    ports:
+      - "5435:5432"
+    volumes:
+      - postgres_chatbot_data:/var/lib/postgresql/data
+      - ./postgres-init/05-chatbot-init.sql:/docker-entrypoint-initdb.d/05-chatbot-init.sql
+    networks:
+      - quiz_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U chatbot_user -d chatbot_db"]
+      timeout: 5s
+      retries: 20
+      interval: 3s
+      start_period: 45s
+
   # MongoDB Atlas is used instead of local container
   # No local MongoDB needed since we use cloud MongoDB Atlas
 
@@ -135,6 +158,7 @@ services:
       QUIZ_SERVICE_API_TOKEN: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.quiz_service_token
       SUBMISSION_SERVICE_BASEURL: http://submission-service-api:9011/api
       SUBMISSION_SERVICE_API_TOKEN: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.submission_service_token
+      CHATBOT_SERVICE_BASEURL: http://chatbot-service-api:9012/api/v1
       # Google configuration
       GOOGLE_CLIENT_ID: 70714368044-ggb9g17lp5vtr6elo9gtrkvvpq9hgflb.apps.googleusercontent.com
       GOOGLE_CLIENT_SECRET: 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
@@ -348,6 +372,46 @@ services:
       start_period: 30s
       interval: 30s
 
+  # Chatbot Service API
+  chatbot-service-api:
+    build:
+      context: ./chatbot-service-api
+      dockerfile: Dockerfile
+    container_name: quiz_chatbot_service_api
+    restart: unless-stopped
+    depends_on:
+      quiz_postgres_chatbot:
+        condition: service_healthy
+    # volumes:
+    #   - ./chatbot-service-api/src:/app/src
+    environment:
+      NODE_ENV: production
+      PORT: 9012
+      # Database configuration for PostgreSQL
+      DB_TYPE: postgres
+      DB_HOST: quiz_postgres_chatbot
+      DB_PORT: 5432
+      DB_USERNAME: chatbot_user
+      DB_PASSWORD: chatbot_password
+      DB_DATABASE: chatbot_db
+      DB_SYNCHRONIZE: "true"
+      DB_LOGGING: "false"
+      # Gemini API
+      GEMINI_API_KEY: AIzaSyAxEHryNnkfdiEXakn5uadNoxwLNioFDzc
+      # External Services (no authentication required)
+      QUESTION_SERVICE_BASEURL: http://question-service-api:9009/api/v1
+      KNOWLEDGE_SERVICE_BASEURL: http://knowledge-service-api:9013/api/v1
+    ports:
+      - "9012:9012"
+    networks:
+      - quiz_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9012/api/health"]
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+      interval: 30s
+
   # Admin Setup - Create admin account after all services are ready
   admin-setup:
     build:
@@ -387,6 +451,8 @@ volumes:
   postgres_quiz_data:
     driver: local
   postgres_submission_data:
+    driver: local
+  postgres_chatbot_data:
     driver: local
   # mongo_data removed since we use MongoDB Atlas
 
