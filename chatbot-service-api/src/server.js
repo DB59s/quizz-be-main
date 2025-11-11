@@ -22,13 +22,23 @@ async function startServer() {
     // Create HTTP server
     const server = http.createServer(app);
 
+    // Socket.IO CORS configuration from environment
+    const socketCorsOrigin = process.env.CORS_ORIGIN || '*';
+    const socketCorsCredentials = process.env.CORS_CREDENTIALS === 'true';
+
     // Initialize Socket.IO
     const io = new Server(server, {
       cors: {
-        origin: "*",
-        methods: ["GET", "POST"]
-      }
+        origin: socketCorsOrigin === '*' ? '*' : socketCorsOrigin.split(',').map(o => o.trim()),
+        methods: ['GET', 'POST'],
+        credentials: socketCorsCredentials
+      },
+      transports: ['websocket', 'polling']
     });
+
+    console.log('[Socket.IO] CORS Configuration:');
+    console.log(`[Socket.IO] - Origin: ${socketCorsOrigin}`);
+    console.log(`[Socket.IO] - Credentials: ${socketCorsCredentials}`);
 
     // Initialize chat handler (no authentication required)
     initializeChatHandler(io);
