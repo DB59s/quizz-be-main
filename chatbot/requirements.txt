@@ -1,7 +1,7 @@
 # Vector Database & Embedding
 sentence-transformers
 chromadb
-torch
+# torch is installed separately with CPU-only version in Dockerfile
 
 # API Framework
 fastapi

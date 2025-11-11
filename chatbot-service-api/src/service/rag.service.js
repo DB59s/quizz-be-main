@@ -207,11 +207,11 @@ async function getRetrievalData(classification, prompt) {
 
     if (type === 'knowledge_base') {
       console.log('[RAG:Retrieval] Searching knowledge base...');
-      const url = `${env.KNOWLEDGE_SERVICE_BASEURL}/internal/knowledge/search`;
+      const url = `${env.KNOWLEDGE_SERVICE_BASEURL}/api/v1/internal/knowledge/search`;
       console.log('[RAG:Retrieval] URL:', url);
       console.log('[RAG:Retrieval] Query:', prompt);
 
-      const response = await axios.post(url, { query: prompt });
+      const response = await axios.post(url, { query: prompt, top_k: 10 });
       const chunks = response.data.data;
       console.log('[RAG:Retrieval] ✓ Knowledge chunks retrieved:', chunks?.length || 0);
       return chunks;
