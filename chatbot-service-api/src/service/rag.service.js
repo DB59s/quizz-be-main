@@ -5,8 +5,8 @@ const { env } = require('../config');
 
 // Initialize Gemini AI
 const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
-const classifierModel = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-const generatorModel = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+const classifierModel = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
+const generatorModel = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
 
 // Get repositories
 const getConvRepo = () => AppDataSource.getRepository('Conversation');
@@ -19,34 +19,76 @@ const getMsgRepo = () => AppDataSource.getRepository('ChatMessage');
  * @returns {Object} - { response, conversation_id }
  */
 async function processMessage(data, account_id) {
+  console.log('\n========================================');
+  console.log('[RAG] 🤖 STARTING RAG PROCESSING');
+  console.log('========================================');
+
   try {
     const { prompt, context, conversation_id } = data;
+    console.log('[RAG] Input:');
+    console.log('[RAG] - Account ID:', account_id);
+    console.log('[RAG] - Conversation ID:', conversation_id || 'NEW');
+    console.log('[RAG] - Prompt:', prompt);
+    console.log('[RAG] - Context:', JSON.stringify(context || null));
 
     // Get conversation history
+    console.log('\n[RAG] Step 1: Getting conversation history...');
+    const historyStart = Date.now();
     const history = await getHistory(conversation_id);
+    console.log(`[RAG] ✓ History retrieved: ${history.length} messages (${Date.now() - historyStart}ms)`);
 
     // Classify the query
+    console.log('\n[RAG] Step 2: Classifying query...');
+    const classifyStart = Date.now();
     const classification = await classifyQuery(prompt, context, history);
-    console.log('[RAG] Classification:', classification);
+    console.log(`[RAG] ✓ Classification result (${Date.now() - classifyStart}ms):`, JSON.stringify(classification));
 
     // Get retrieval data based on classification
+    console.log('\n[RAG] Step 3: Retrieving data...');
+    const retrievalStart = Date.now();
     const retrievalData = await getRetrievalData(classification, prompt);
+    console.log(`[RAG] ✓ Retrieval completed (${Date.now() - retrievalStart}ms)`);
+    if (retrievalData) {
+      console.log('[RAG] - Retrieved data type:', Array.isArray(retrievalData) ? 'Array' : 'Object');
+      console.log('[RAG] - Data size:', JSON.stringify(retrievalData).length, 'characters');
+    } else {
+      console.log('[RAG] - No retrieval data (using history only)');
+    }
 
     // Build final prompt for generator
+    console.log('\n[RAG] Step 4: Building final prompt...');
     const finalPrompt = buildFinalPrompt(classification.type, retrievalData, prompt);
+    console.log('[RAG] ✓ Final prompt length:', finalPrompt.length, 'characters');
 
     // Call Gemini generator
+    console.log('\n[RAG] Step 5: Calling Gemini AI...');
+    const geminiStart = Date.now();
     const responseText = await callGeminiGenerator(finalPrompt, history);
+    console.log(`[RAG] ✓ Gemini response received (${Date.now() - geminiStart}ms)`);
+    console.log('[RAG] - Response length:', responseText.length, 'characters');
 
     // Save to history
+    console.log('\n[RAG] Step 6: Saving to database...');
+    const saveStart = Date.now();
     const newConvId = await saveToHistory(account_id, conversation_id, prompt, responseText);
+    console.log(`[RAG] ✓ Saved to database (${Date.now() - saveStart}ms)`);
+    console.log('[RAG] - Conversation ID:', newConvId);
+
+    console.log('\n========================================');
+    console.log('[RAG] ✅ RAG PROCESSING COMPLETED');
+    console.log('========================================\n');
 
     return {
       response: responseText,
       conversation_id: newConvId || conversation_id
     };
   } catch (error) {
-    console.error('[RAG] Process message error:', error);
+    console.error('\n========================================');
+    console.error('[RAG] ❌ RAG PROCESSING ERROR');
+    console.error('========================================');
+    console.error('[RAG] Error:', error.message);
+    console.error('[RAG] Stack:', error.stack);
+    console.error('========================================\n');
     throw error;
   }
 }
@@ -60,20 +102,26 @@ async function processMessage(data, account_id) {
  */
 async function classifyQuery(prompt, context, history) {
   try {
+    console.log('[RAG:Classify] Analyzing context...');
+
     // Type 1: FE specifies question_bank with ID
     if (context?.type === 'question' && context.id) {
+      console.log('[RAG:Classify] ✓ Type 1: question_bank (Frontend specified)');
+      console.log('[RAG:Classify] - Question ID:', context.id);
       return { type: 'question_bank', context_id: context.id };
     }
 
     // Type 2: FE specifies knowledge_base
     if (context?.type === 'knowledge') {
+      console.log('[RAG:Classify] ✓ Type 2: knowledge_base (Frontend specified)');
       return { type: 'knowledge_base' };
     }
 
     // Type 3: Use Gemini to classify (knowledge_base or history)
+    console.log('[RAG:Classify] No context from frontend, using Gemini to classify...');
     const historyText = history.map(h => `${h.role}: ${h.parts.join(' ')}`).join('\n');
-    
-    const classificationPrompt = `Phân loại câu hỏi sau của người dùng thành một trong 3 loại: "question_bank", "knowledge_base", "history". 
+
+    const classificationPrompt = `Phân loại câu hỏi sau của người dùng thành một trong 3 loại: "question_bank", "knowledge_base", "history".
 Chỉ trả về một JSON object có dạng {"type": "..."}.
 
 Lịch sử chat (nếu có):
@@ -88,20 +136,24 @@ Quy tắc phân loại:
 
 Chỉ trả về JSON, không giải thích thêm.`;
 
+    console.log('[RAG:Classify] Calling Gemini classifier...');
     const result = await classifierModel.generateContent(classificationPrompt);
     const responseText = result.response.text().trim();
-    
+    console.log('[RAG:Classify] Gemini response:', responseText);
+
     // Extract JSON from response
     const jsonMatch = responseText.match(/\{[^}]+\}/);
     if (jsonMatch) {
       const jsonResponse = JSON.parse(jsonMatch[0]);
+      console.log('[RAG:Classify] ✓ Parsed classification:', jsonResponse.type);
       return jsonResponse;
     }
 
     // Default to history if parsing fails
+    console.log('[RAG:Classify] ⚠ Failed to parse, defaulting to history');
     return { type: 'history' };
   } catch (error) {
-    console.error('[RAG] Classification error:', error);
+    console.error('[RAG:Classify] ❌ Classification error:', error.message);
     // Default to history on error
     return { type: 'history' };
   }
@@ -116,28 +168,64 @@ Chỉ trả về JSON, không giải thích thêm.`;
 async function getRetrievalData(classification, prompt) {
   try {
     const { type, context_id } = classification;
+    console.log('[RAG:Retrieval] Type:', type);
 
-    if (type === 'question_bank' && context_id) {
-      // Call Question Service to get question details
-      const response = await axios.get(
-        `${env.QUESTION_SERVICE_BASEURL}/questions/internal/${context_id}`
-      );
-      return response.data.data;
+    if (type === 'question_bank') {
+      // Case 1: Frontend provides question_id
+      if (context_id) {
+        console.log('[RAG:Retrieval] Fetching question by ID:', context_id);
+        const url = `${env.QUESTION_SERVICE_BASEURL}/questions/internal/${context_id}`;
+        console.log('[RAG:Retrieval] URL:', url);
+
+        const response = await axios.get(url);
+        console.log('[RAG:Retrieval] ✓ Question retrieved successfully');
+        console.log('[RAG:Retrieval] - Question data:', JSON.stringify(response.data.data).substring(0, 200) + '...');
+        return response.data.data;
+      }
+
+      // Case 2: Search question by text (if Question Service supports search)
+      console.log('[RAG:Retrieval] No question_id provided, trying to search by text...');
+      try {
+        const searchUrl = `${env.QUESTION_SERVICE_BASEURL}/questions/internal/search`;
+        console.log('[RAG:Retrieval] Search URL:', searchUrl);
+
+        const searchResponse = await axios.post(searchUrl, { query: prompt, limit: 1 });
+
+        if (searchResponse.data.data && searchResponse.data.data.length > 0) {
+          console.log('[RAG:Retrieval] ✓ Found question by search');
+          return searchResponse.data.data[0];
+        }
+        console.log('[RAG:Retrieval] ⚠ No questions found by search');
+      } catch (searchError) {
+        console.warn('[RAG:Retrieval] ⚠ Question search endpoint not available:', searchError.message);
+        console.warn('[RAG:Retrieval] Falling back to knowledge_base');
+      }
+
+      // Fallback: Treat as knowledge_base if search fails
+      return null;
     }
 
     if (type === 'knowledge_base') {
-      // Call Knowledge Service to search for relevant chunks
-      const response = await axios.post(
-        `${env.KNOWLEDGE_SERVICE_BASEURL}/internal/knowledge/search`,
-        { query: prompt }
-      );
-      return response.data.data;
+      console.log('[RAG:Retrieval] Searching knowledge base...');
+      const url = `${env.KNOWLEDGE_SERVICE_BASEURL}/internal/knowledge/search`;
+      console.log('[RAG:Retrieval] URL:', url);
+      console.log('[RAG:Retrieval] Query:', prompt);
+
+      const response = await axios.post(url, { query: prompt });
+      const chunks = response.data.data;
+      console.log('[RAG:Retrieval] ✓ Knowledge chunks retrieved:', chunks?.length || 0);
+      return chunks;
     }
 
     // For 'history' type, no retrieval needed
+    console.log('[RAG:Retrieval] Type is "history", no retrieval needed');
     return null;
   } catch (error) {
-    console.error('[RAG] Retrieval error:', error.message);
+    console.error('[RAG:Retrieval] ❌ Retrieval error:', error.message);
+    if (error.response) {
+      console.error('[RAG:Retrieval] - Status:', error.response.status);
+      console.error('[RAG:Retrieval] - Data:', JSON.stringify(error.response.data));
+    }
     return null;
   }
 }
@@ -234,6 +322,10 @@ async function getHistory(conversation_id) {
  */
 async function saveToHistory(account_id, conversation_id, userMessage, modelResponse) {
   try {
+    console.log('[RAG:Save] Saving to database...');
+    console.log('[RAG:Save] - Account ID:', account_id);
+    console.log('[RAG:Save] - Conversation ID:', conversation_id || 'NEW');
+
     const convRepo = getConvRepo();
     const msgRepo = getMsgRepo();
 
@@ -241,33 +333,46 @@ async function saveToHistory(account_id, conversation_id, userMessage, modelResp
 
     // Create new conversation if not exists
     if (!convId) {
+      console.log('[RAG:Save] Creating new conversation...');
+      const title = userMessage.substring(0, 50) + (userMessage.length > 50 ? '...' : '');
+      console.log('[RAG:Save] - Title:', title);
+
       const newConv = convRepo.create({
         account_id,
-        title: userMessage.substring(0, 50) + (userMessage.length > 50 ? '...' : '')
+        title
       });
       const savedConv = await convRepo.save(newConv);
       convId = savedConv.id;
+      console.log('[RAG:Save] ✓ New conversation created:', convId);
+    } else {
+      console.log('[RAG:Save] Using existing conversation:', convId);
     }
 
     // Save user message
+    console.log('[RAG:Save] Saving user message...');
     const userMsg = msgRepo.create({
       conversation_id: convId,
       role: 'user',
       content: userMessage
     });
-    await msgRepo.save(userMsg);
+    const savedUserMsg = await msgRepo.save(userMsg);
+    console.log('[RAG:Save] ✓ User message saved, ID:', savedUserMsg.id);
 
     // Save model response
+    console.log('[RAG:Save] Saving model response...');
     const modelMsg = msgRepo.create({
       conversation_id: convId,
       role: 'model',
       content: modelResponse
     });
-    await msgRepo.save(modelMsg);
+    const savedModelMsg = await msgRepo.save(modelMsg);
+    console.log('[RAG:Save] ✓ Model response saved, ID:', savedModelMsg.id);
 
+    console.log('[RAG:Save] ✓ All data saved successfully');
     return convId;
   } catch (error) {
-    console.error('[RAG] Save history error:', error);
+    console.error('[RAG:Save] ❌ Save history error:', error.message);
+    console.error('[RAG:Save] Stack:', error.stack);
     throw error;
   }
 }

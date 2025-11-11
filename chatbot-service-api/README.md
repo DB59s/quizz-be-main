@@ -109,8 +109,23 @@ npm run start
 ## 🔌 API Endpoints
 
 ### Base URLs
-- **Development:** `http://localhost:9012`
-- **API Base:** `/api/v1`
+- **Gateway API (Khuyến nghị):** `http://localhost:9000/api/v1/chatbot`
+- **Direct Access:** `http://localhost:9012/api/v1`
+
+### **Qua Gateway API** (Khuyến nghị)
+
+Tất cả các endpoints có thể truy cập qua Gateway API:
+
+| Method | Gateway Endpoint | Mô tả | Params |
+|--------|------------------|-------|--------|
+| GET | `/api/v1/chatbot/conversations` | Lấy danh sách conversations | ?account_id=xxx |
+| POST | `/api/v1/chatbot/conversations` | Tạo conversation mới | body: {account_id, title} |
+| GET | `/api/v1/chatbot/conversations/:id` | Lấy thông tin conversation | ?account_id=xxx |
+| PUT | `/api/v1/chatbot/conversations/:id` | Cập nhật conversation | ?account_id=xxx, body: {title} |
+| DELETE | `/api/v1/chatbot/conversations/:id` | Xóa conversation | ?account_id=xxx |
+| GET | `/api/v1/chatbot/conversations/:id/messages` | Lấy messages | ?account_id=xxx |
+
+### **Trực tiếp từ Chatbot Service** (Port 9012)
 
 ### Conversation Endpoints (REST API)
 

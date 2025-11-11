@@ -198,7 +198,7 @@ services:
       NODE_ENV: production
       PORT: 9004
       # MongoDB Atlas configuration
-      MONGO_URI: mongodb+srv://vuduy050903_db_user:3qHHYv2yylxfhHyg@cluster0.icn9gah.mongodb.net/user_service?retryWrites=true&w=majority&appName=Cluster0
+      MONGO_URI: mongodb+srv://duydeptraicldt_db_user:VZmwlT5cbHdePm9r@cluster0.w4lixnp.mongodb.net/?appName=Cluster0
       # API configuration
       API_PREFIX: /api/v1
       API_TOKEN: 45f65we46f5ew465few465we46fwe46f4ew65f46w5e4f65we4f65ew46few465f
@@ -397,7 +397,7 @@ services:
       DB_SYNCHRONIZE: "true"
       DB_LOGGING: "false"
       # Gemini API
-      GEMINI_API_KEY: AIzaSyAxEHryNnkfdiEXakn5uadNoxwLNioFDzc
+      GEMINI_API_KEY: AIzaSyAeayCsv1fWTQkbHHNny_EmIjZQl5zhax8  # ← Thay bằng API key mới
       # External Services (no authentication required)
       QUESTION_SERVICE_BASEURL: http://question-service-api:9009/api/v1
       KNOWLEDGE_SERVICE_BASEURL: http://knowledge-service-api:9013/api/v1
