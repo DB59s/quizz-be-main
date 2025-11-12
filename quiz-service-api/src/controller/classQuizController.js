@@ -408,6 +408,38 @@ class ClassQuizController {
       });
     }
   }
+
+  /**
+   * Get all class quizzes for a teacher
+   * GET /api/class-quizzes/teacher/:teacher_id
+   */
+  async getTeacherClassQuizzes(req, res) {
+    try {
+      const { teacher_id } = req.params;
+
+      if (!teacher_id) {
+        return res.status(400).json({
+          success: false,
+          message: 'teacher_id is required'
+        });
+      }
+
+      const classQuizIds = await classQuizService.getTeacherClassQuizzes(teacher_id);
+
+      return res.status(200).json({
+        success: true,
+        message: 'Teacher class quizzes retrieved successfully',
+        data: classQuizIds
+      });
+    } catch (error) {
+      console.error('Error getting teacher class quizzes:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to get teacher class quizzes',
+        error: error.message
+      });
+    }
+  }
 }
 
 module.exports = new ClassQuizController();

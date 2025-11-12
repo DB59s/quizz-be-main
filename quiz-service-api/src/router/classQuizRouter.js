@@ -43,4 +43,9 @@ router.get('/:id', classQuizController.getClassQuizById);
  */
 router.get('/student/:student_id/upcoming/count', classQuizController.getUpcomingQuizzesCount);
 
+/**
+ * GET /api/class-quizzes/teacher/:teacher_id - Get all class quizzes for a teacher
+ */
+router.get('/teacher/:teacher_id', classQuizController.getTeacherClassQuizzes);
+
 module.exports = router;
