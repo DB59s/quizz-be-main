@@ -1009,14 +1009,13 @@ class SubmissionService {
     try {
       await this.init();
 
-      // Get all quizzes of the teacher from quiz-service
-      const quizzesResponse = await quizService('GET', `/quizzes`, null, {
-        headers: { 'x-teacher-id': teacher_id },
-        params: { page: 1, limit: 1000 } // Get all quizzes
+      // Get all class quiz IDs managed by this teacher from quiz-service
+      const classQuizResponse = await quizService('GET', `/class-quizzes/teacher/${teacher_id}`, null, {
+        headers: { 'x-service-call': 'true' }
       });
 
-      if (!quizzesResponse.data?.success || !quizzesResponse.data?.data || quizzesResponse.data.data.length === 0) {
-        // No quizzes, return empty distribution
+      if (!classQuizResponse.data?.success || !classQuizResponse.data?.data || classQuizResponse.data.data.length === 0) {
+        // No class quizzes, return empty distribution
         return [
           { range: '0-4 (Yếu)', count: 0 },
           { range: '4-6 (Trung bình)', count: 0 },
@@ -1025,34 +1024,15 @@ class SubmissionService {
         ];
       }
 
-      const quizIds = quizzesResponse.data.data.map(q => q.id);
+      const classQuizIds = classQuizResponse.data.data;
 
-      // Get all submissions and filter by checking if their class_quiz belongs to teacher's quizzes
-      // We'll need to check each submission's class_quiz
-      const allSubmissions = await this.submissionRepository
+      // Get all graded submissions for these class quizzes
+      const teacherSubmissions = await this.submissionRepository
         .createQueryBuilder('submission')
         .where('submission.status = :status', { status: 'graded' })
         .andWhere('submission.score IS NOT NULL')
+        .andWhere('submission.class_quiz_id IN (:...classQuizIds)', { classQuizIds })
         .getMany();
-
-      // Filter submissions that belong to teacher's quizzes
-      const teacherSubmissions = [];
-      for (const submission of allSubmissions) {
-        try {
-          const classQuizResponse = await quizService('GET', `/class-quizzes/${submission.class_quiz_id}`, null, {
-            headers: { 'x-service-call': 'true' }
-          });
-          if (classQuizResponse.data?.success && classQuizResponse.data?.data) {
-            const quizzId = classQuizResponse.data.data.quizz_id;
-            if (quizIds.includes(quizzId)) {
-              teacherSubmissions.push(submission);
-            }
-          }
-        } catch (error) {
-          // Skip this submission if we can't fetch class quiz info
-          console.error(`Error fetching class quiz ${submission.class_quiz_id}:`, error);
-        }
-      }
 
       // Group by score ranges
       const distribution = {

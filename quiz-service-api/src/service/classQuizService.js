@@ -556,6 +556,30 @@ class ClassQuizService {
       return 0;
     }
   }
+
+  /**
+   * Get all class quizzes for a teacher
+   * @param {string} teacher_id - Teacher ID
+   * @returns {Promise<Array>} List of class quiz IDs
+   */
+  async getTeacherClassQuizzes(teacher_id) {
+    try {
+      const classQuizRepository = AppDataSource.getRepository('ClassQuiz');
+
+      // Get all class quizzes where the quiz belongs to the teacher
+      const classQuizzes = await classQuizRepository
+        .createQueryBuilder('cq')
+        .leftJoin('cq.quiz', 'quiz')
+        .where('quiz.teacher_id = :teacher_id', { teacher_id })
+        .select(['cq.id'])
+        .getMany();
+
+      return classQuizzes.map(cq => cq.id);
+    } catch (error) {
+      console.error('Error getting teacher class quizzes:', error);
+      throw error;
+    }
+  }
 }
 
 module.exports = new ClassQuizService();
