@@ -199,7 +199,7 @@ services:
       NODE_ENV: production
       PORT: 9004
       # MongoDB Atlas configuration
-      MONGO_URI: mongodb+srv://duydeptraicldt_db_user:VZmwlT5cbHdePm9r@cluster0.w4lixnp.mongodb.net/?appName=Cluster0
+      MONGO_URI: mongodb+srv://vuduy050903_db_user:3qHHYv2yylxfhHyg@cluster0.icn9gah.mongodb.net/user_service?retryWrites=true&w=majority&appName=Cluster0
       # API configuration
       API_PREFIX: /api/v1
       API_TOKEN: 45f65we46f5ew465few465we46fwe46f4ew65f46w5e4f65we4f65ew46few465f
