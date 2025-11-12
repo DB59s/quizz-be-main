@@ -1039,7 +1039,9 @@ class SubmissionService {
       const teacherSubmissions = [];
       for (const submission of allSubmissions) {
         try {
-          const classQuizResponse = await quizService('GET', `/class-quizzes/${submission.class_quiz_id}`);
+          const classQuizResponse = await quizService('GET', `/class-quizzes/${submission.class_quiz_id}`, null, {
+            headers: { 'x-service-call': 'true' }
+          });
           if (classQuizResponse.data?.success && classQuizResponse.data?.data) {
             const quizzId = classQuizResponse.data.data.quizz_id;
             if (quizIds.includes(quizzId)) {
