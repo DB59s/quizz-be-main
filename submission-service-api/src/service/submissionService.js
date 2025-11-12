@@ -1010,9 +1010,12 @@ class SubmissionService {
       await this.init();
 
       // Get all quizzes of the teacher from quiz-service
-      const quizzesResponse = await quizService('GET', `/quizzes?teacher_id=${teacher_id}`);
+      const quizzesResponse = await quizService('GET', `/quizzes`, null, {
+        headers: { 'x-teacher-id': teacher_id },
+        params: { page: 1, limit: 1000 } // Get all quizzes
+      });
 
-      if (!quizzesResponse.success || !quizzesResponse.data || quizzesResponse.data.length === 0) {
+      if (!quizzesResponse.data?.success || !quizzesResponse.data?.data || quizzesResponse.data.data.length === 0) {
         // No quizzes, return empty distribution
         return [
           { range: '0-4 (Yếu)', count: 0 },
@@ -1022,7 +1025,7 @@ class SubmissionService {
         ];
       }
 
-      const quizIds = quizzesResponse.data.map(q => q.id);
+      const quizIds = quizzesResponse.data.data.map(q => q.id);
 
       // Get all submissions and filter by checking if their class_quiz belongs to teacher's quizzes
       // We'll need to check each submission's class_quiz
@@ -1037,8 +1040,8 @@ class SubmissionService {
       for (const submission of allSubmissions) {
         try {
           const classQuizResponse = await quizService('GET', `/class-quizzes/${submission.class_quiz_id}`);
-          if (classQuizResponse.success && classQuizResponse.data) {
-            const quizzId = classQuizResponse.data.quizz_id;
+          if (classQuizResponse.data?.success && classQuizResponse.data?.data) {
+            const quizzId = classQuizResponse.data.data.quizz_id;
             if (quizIds.includes(quizzId)) {
               teacherSubmissions.push(submission);
             }
