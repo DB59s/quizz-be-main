@@ -4,6 +4,7 @@ Dựa trên chunking_strategy.py
 """
 
 import re
+import uuid
 from typing import List, Dict
 from core.config import settings
 
@@ -178,6 +179,9 @@ class DocumentChunker:
             List of chunks với metadata
         """
         all_chunks = []
+        # Generate unique prefix for this document to avoid ID collisions
+        # when uploading multiple documents
+        doc_prefix = str(uuid.uuid4())[:8]
         chunk_id = 0
 
         # Trích xuất phần giới thiệu (trước chương 1)
@@ -196,7 +200,7 @@ class DocumentChunker:
 
                 for chunk_text in intro_chunks:
                     all_chunks.append({
-                        'chunk_id': f'chunk_{chunk_id:04d}',
+                        'chunk_id': f'{doc_prefix}_chunk_{chunk_id:04d}',
                         'chapter': 'Giới thiệu',
                         'section': 'Lời nói đầu và Mục lục',
                         'context': 'GIỚI THIỆU',
@@ -234,7 +238,7 @@ class DocumentChunker:
 
                     for chunk_text in section_chunks:
                         all_chunks.append({
-                            'chunk_id': f'chunk_{chunk_id:04d}',
+                            'chunk_id': f'{doc_prefix}_chunk_{chunk_id:04d}',
                             'chapter': chapter_title,
                             'section': f"{section_num} {section_title}",
                             'context': context,
@@ -253,7 +257,7 @@ class DocumentChunker:
 
                 for chunk_text in chapter_chunks:
                     all_chunks.append({
-                        'chunk_id': f'chunk_{chunk_id:04d}',
+                        'chunk_id': f'{doc_prefix}_chunk_{chunk_id:04d}',
                         'chapter': chapter_title,
                         'section': 'Toàn chương',
                         'context': context,

@@ -199,7 +199,21 @@ class VectorStore:
         if not self.collection:
             self.get_collection()
 
-        count = self.collection.count()
+        # Always refresh collection to get latest count
+        self.collection = self.client.get_collection(name=self.collection_name)
+
+        # Use get() with include parameter to count documents more reliably
+        # ChromaDB count() may not be updated immediately after add()
+        try:
+            # Get all documents to count them accurately
+            # Use include=[] to only get IDs without embeddings/documents/metadatas
+            all_docs = self.collection.get(limit=100000, include=[])
+            count = len(all_docs['ids']) if all_docs and 'ids' in all_docs else 0
+            print(f"[Stats] Retrieved {count} documents from collection")
+        except Exception as e:
+            # Fallback to count() if get() fails
+            print(f"[Stats] get() failed: {e}, using count()")
+            count = self.collection.count()
 
         return {
             "collection_name": self.collection_name,

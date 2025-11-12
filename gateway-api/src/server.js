@@ -4,6 +4,9 @@ require('reflect-metadata');
 // Load environment configuration
 const { env, AppDataSource } = require('./config');
 const app = require('./app');
+const http = require('http');
+const { Server } = require('socket.io');
+const { initializeSocketProxy } = require('./socket/proxy');
 
 // Database connection with retry
 async function connectDatabase() {
@@ -36,14 +39,39 @@ async function connectDatabase() {
 // Server startup function
 async function startServer() {
   try {
+    // Create HTTP server
+    const server = http.createServer(app);
+
+    // Socket.IO CORS configuration
+    const socketCorsOrigin = process.env.CORS_ORIGIN || '*';
+    const socketCorsCredentials = process.env.CORS_CREDENTIALS === 'true';
+
+    // Initialize Socket.IO server
+    const io = new Server(server, {
+      cors: {
+        origin: socketCorsOrigin === '*' ? '*' : socketCorsOrigin.split(',').map(o => o.trim()),
+        methods: ['GET', 'POST'],
+        credentials: socketCorsCredentials
+      },
+      transports: ['websocket', 'polling']
+    });
+
+    console.log('[Gateway Socket.IO] CORS Configuration:');
+    console.log(`[Gateway Socket.IO] - Origin: ${socketCorsOrigin}`);
+    console.log(`[Gateway Socket.IO] - Credentials: ${socketCorsCredentials}`);
+
+    // Initialize Socket.IO proxy to Chatbot Service
+    initializeSocketProxy(io);
+
     // Start server first (so health check passes)
-    const server = app.listen(env.PORT, () => {
+    server.listen(env.PORT, () => {
       console.log('');
       console.log('🚀 ===================================');
-      console.log(`🚀 Server running in ${env.NODE_ENV} mode`);
+      console.log(`🚀 Gateway running in ${env.NODE_ENV} mode`);
       console.log(`🚀 Server started on port ${env.PORT}`);
       console.log(`🚀 Local URL: http://localhost:${env.PORT}`);
       console.log(`🚀 API URL: http://localhost:${env.PORT}/api`);
+      console.log(`🚀 Socket.IO Proxy enabled (→ Chatbot Service)`);
       console.log('🚀 ===================================');
       console.log('');
     });

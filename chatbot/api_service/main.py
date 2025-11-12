@@ -164,6 +164,12 @@ async def upload_file(request: UploadRequest):
                 recreate_collection=request.recreate_collection
             )
 
+            # Refresh query engine if collection was recreated
+            if request.recreate_collection:
+                global query_engine
+                query_engine = QueryEngine()
+                print("[Upload] ✓ Query engine refreshed after collection recreation")
+
             # Get updated stats
             stats = query_engine.get_stats()
 
@@ -338,6 +344,12 @@ async def batch_upload(request: BatchUploadRequest):
                 if os.path.exists(tmp_file_path):
                     os.unlink(tmp_file_path)
 
+        # Refresh query engine if collection was recreated
+        if request.recreate_collection:
+            global query_engine
+            query_engine = QueryEngine()
+            print("[Batch Upload] ✓ Query engine refreshed after collection recreation")
+
         # Get updated stats
         stats = query_engine.get_stats()
 
@@ -430,6 +442,12 @@ async def public_upload(request: UploadRequest):
                 input_file=tmp_file_path,
                 recreate_collection=request.recreate_collection
             )
+
+            # Refresh query engine if collection was recreated
+            if request.recreate_collection:
+                global query_engine
+                query_engine = QueryEngine()
+                print("[Public API] ✓ Query engine refreshed after collection recreation")
 
             stats = query_engine.get_stats()
 

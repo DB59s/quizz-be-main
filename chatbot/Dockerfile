@@ -24,13 +24,17 @@ COPY . .
 # Create necessary directories
 RUN mkdir -p data/chromadb data/input
 
-# Expose API port
-EXPOSE 9013
+# Expose API port (default 9009, can be overridden by API_PORT env var)
+EXPOSE 9009
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD curl -f http://localhost:9013/health || exit 1
+# Create healthcheck script that uses API_PORT env var
+RUN echo '#!/bin/sh\ncurl -f http://localhost:${API_PORT:-9009}/health || exit 1' > /healthcheck.sh && \
+    chmod +x /healthcheck.sh
 
-# Run the API service
-CMD ["python", "-m", "uvicorn", "api_service.main:app", "--host", "0.0.0.0", "--port", "9013"]
+# Health check - uses healthcheck script
+HEALTHCHECK --interval=30s --timeout=10s --start-period=120s --retries=5 \
+    CMD /healthcheck.sh
+
+# Run the API service - uses API_PORT env var from docker-compose
+CMD sh -c "python -m uvicorn api_service.main:app --host 0.0.0.0 --port ${API_PORT:-9009}"
 

@@ -158,8 +158,8 @@ services:
       QUIZ_SERVICE_API_TOKEN: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.quiz_service_token
       SUBMISSION_SERVICE_BASEURL: http://submission-service-api:9011/api
       SUBMISSION_SERVICE_API_TOKEN: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.submission_service_token
-      CHATBOT_SERVICE_BASEURL: http://chatbot-service-api:9009/api/v1
-      KNOWLEDGE_SERVICE_BASEURL: http://knowledge-service-api:9013
+      CHATBOT_SERVICE_BASEURL: http://chatbot-service-api:9013/api/v1
+      KNOWLEDGE_SERVICE_BASEURL: http://knowledge-service-api:9009
       # Google configuration
       GOOGLE_CLIENT_ID: 70714368044-ggb9g17lp5vtr6elo9gtrkvvpq9hgflb.apps.googleusercontent.com
       GOOGLE_CLIENT_SECRET: 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
@@ -389,7 +389,7 @@ services:
     #   - ./chatbot-service-api/src:/app/src
     environment:
       NODE_ENV: production
-      PORT: 9009
+      PORT: 9013
       # Database configuration for PostgreSQL
       DB_TYPE: postgres
       DB_HOST: quiz_postgres_chatbot
@@ -406,13 +406,13 @@ services:
       GEMINI_API_KEY: AIzaSyAeayCsv1fWTQkbHHNny_EmIjZQl5zhax8
       # External Services (no authentication required)
       QUESTION_SERVICE_BASEURL: http://question-service-api:9012/api/v1
-      KNOWLEDGE_SERVICE_BASEURL: http://knowledge-service-api:9013
+      KNOWLEDGE_SERVICE_BASEURL: http://knowledge-service-api:9009
     ports:
-      - "9009:9009"
+      - "9013:9013"
     networks:
       - quiz_network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9009/api/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:9013/api/health"]
       timeout: 10s
       retries: 5
       start_period: 30s
@@ -433,7 +433,7 @@ services:
     environment:
       # API Settings
       API_HOST: 0.0.0.0
-      API_PORT: 9013
+      API_PORT: 9009
       API_RELOAD: "false"
       # Embedding Model
       EMBEDDING_MODEL: intfloat/multilingual-e5-large
@@ -446,11 +446,11 @@ services:
       DEFAULT_TOP_K: 10
       MAX_TOP_K: 50
     ports:
-      - "9013:9013"
+      - "9009:9009"
     networks:
       - quiz_network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9013/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:9009/health"]
       timeout: 10s
       retries: 5
       start_period: 120s  # Longer start period for model loading

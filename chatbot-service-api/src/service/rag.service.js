@@ -34,7 +34,7 @@ async function processMessage(data, account_id) {
     // Get conversation history
     console.log('\n[RAG] Step 1: Getting conversation history...');
     const historyStart = Date.now();
-    const history = await getHistory(conversation_id);
+    const history = await getHistory(conversation_id, account_id);
     console.log(`[RAG] ✓ History retrieved: ${history.length} messages (${Date.now() - historyStart}ms)`);
 
     // Classify the query
@@ -119,22 +119,36 @@ async function classifyQuery(prompt, context, history) {
 
     // Type 3: Use Gemini to classify (knowledge_base or history)
     console.log('[RAG:Classify] No context from frontend, using Gemini to classify...');
-    const historyText = history.map(h => `${h.role}: ${h.parts.join(' ')}`).join('\n');
+    console.log('[RAG:Classify] History length for classification:', history.length);
 
-    const classificationPrompt = `Phân loại câu hỏi sau của người dùng thành một trong 3 loại: "question_bank", "knowledge_base", "history".
-Chỉ trả về một JSON object có dạng {"type": "..."}.
+    const historyText = history.length > 0
+      ? history.map(h => `${h.role}: ${h.parts.join(' ')}`).join('\n')
+      : '(Không có lịch sử chat)';
 
-Lịch sử chat (nếu có):
+    const classificationPrompt = `Bạn là một AI phân loại câu hỏi. Phân loại câu hỏi của người dùng thành một trong 3 loại sau:
+
+1. "question_bank": Câu hỏi về bài tập, đề thi, câu hỏi trắc nghiệm cụ thể
+   - Ví dụ: "Giải thích câu hỏi về deadlock", "Có bao nhiêu câu hỏi về hệ điều hành?"
+
+2. "knowledge_base": Câu hỏi về kiến thức chung, khái niệm, lý thuyết, định nghĩa
+   - Ví dụ: "Tiến trình là gì?", "SQL là gì?", "Giải thích về deadlock"
+
+3. "history": Câu hỏi liên quan đến lịch sử chat trước đó, hoặc câu hỏi chung không liên quan đến học tập
+   - Ví dụ: "Kể cho tôi một câu chuyện", "Hôm nay thời tiết thế nào?", "Bạn vừa nói gì?"
+
+---
+
+LỊCH SỬ CHAT GÇN ĐÂY:
 ${historyText}
 
-Câu hỏi người dùng: "${prompt}"
+CÂU HỎI NGƯỜI DÙNG:
+"${prompt}"
 
-Quy tắc phân loại:
-- "question_bank": Nếu người dùng hỏi về một câu hỏi cụ thể, bài tập, đề thi
-- "knowledge_base": Nếu người dùng hỏi về kiến thức chung, khái niệm, lý thuyết
-- "history": Nếu câu hỏi liên quan đến lịch sử chat trước đó
+---
 
-Chỉ trả về JSON, không giải thích thêm.`;
+Dựa vào lịch sử chat và câu hỏi, hãy phân loại câu hỏi.
+Chỉ trả về một JSON object có dạng: {"type": "question_bank"} hoặc {"type": "knowledge_base"} hoặc {"type": "history"}
+Không giải thích, chỉ trả về JSON.`;
 
     console.log('[RAG:Classify] Calling Gemini classifier...');
     const result = await classifierModel.generateContent(classificationPrompt);
@@ -275,11 +289,53 @@ Yêu cầu:
  */
 async function callGeminiGenerator(finalPrompt, history) {
   try {
-    const chat = generatorModel.startChat({ history });
+    console.log('[RAG:Generator] Starting Gemini chat...');
+    console.log('[RAG:Generator] History length:', history.length);
+
+    // Validate and convert history format
+    const validHistory = history
+      .filter(h => {
+        if (!h.role || !h.parts || !Array.isArray(h.parts)) {
+          console.warn('[RAG:Generator] ⚠ Invalid history item:', h);
+          return false;
+        }
+        return true;
+      })
+      .map(h => ({
+        role: h.role,
+        parts: h.parts.map(part => {
+          // If part is already an object with 'text' property, use it
+          if (typeof part === 'object' && part.text) {
+            return part;
+          }
+          // If part is a string, convert to { text: "..." }
+          if (typeof part === 'string') {
+            return { text: part };
+          }
+          // Otherwise, skip this part
+          console.warn('[RAG:Generator] ⚠ Invalid part format:', part);
+          return null;
+        }).filter(p => p !== null)
+      }))
+      .filter(h => h.parts.length > 0); // Remove history items with no valid parts
+
+    console.log('[RAG:Generator] Valid history items:', validHistory.length);
+
+    // Start chat with validated history
+    const chat = generatorModel.startChat({
+      history: validHistory.length > 0 ? validHistory : undefined
+    });
+
+    console.log('[RAG:Generator] Sending message to Gemini...');
     const result = await chat.sendMessage(finalPrompt);
-    return result.response.text();
+    const responseText = result.response.text();
+
+    console.log('[RAG:Generator] ✓ Response received');
+    return responseText;
   } catch (error) {
-    console.error('[RAG] Generator error:', error);
+    console.error('[RAG:Generator] ❌ Generator error:', error.message);
+    console.error('[RAG:Generator] Error stack:', error.stack);
+    console.error('[RAG:Generator] History that caused error:', JSON.stringify(history));
     throw new Error('Failed to generate response');
   }
 }
@@ -287,27 +343,75 @@ async function callGeminiGenerator(finalPrompt, history) {
 /**
  * Get conversation history
  * @param {string} conversation_id - Conversation ID
+ * @param {string} account_id - User's account ID (optional, for getting recent history)
  * @returns {Array} - History in Gemini format
  */
-async function getHistory(conversation_id) {
+async function getHistory(conversation_id, account_id = null) {
   try {
-    if (!conversation_id) {
-      return [];
+    const msgRepo = getMsgRepo();
+    const convRepo = getConvRepo();
+
+    // Case 1: Has conversation_id - get history from this conversation
+    if (conversation_id) {
+      console.log('[RAG:History] Getting history for conversation:', conversation_id);
+      const messages = await msgRepo.find({
+        where: { conversation_id },
+        order: { created_at: 'ASC' }
+      });
+
+      console.log('[RAG:History] ✓ Found', messages.length, 'messages in conversation');
+
+      // Convert to Gemini history format
+      return messages.map(msg => ({
+        role: msg.role,
+        parts: [msg.content]
+      }));
     }
 
-    const msgRepo = getMsgRepo();
-    const messages = await msgRepo.find({
-      where: { conversation_id },
-      order: { created_at: 'ASC' }
-    });
+    // Case 2: No conversation_id but has account_id - get recent history from user's conversations
+    if (account_id) {
+      console.log('[RAG:History] No conversation_id, getting recent history for account:', account_id);
 
-    // Convert to Gemini history format
-    return messages.map(msg => ({
-      role: msg.role,
-      parts: [msg.content]
-    }));
+      // Get recent conversations of this user (last 3 conversations)
+      const recentConversations = await convRepo.find({
+        where: { account_id },
+        order: { updated_at: 'DESC' },
+        take: 3
+      });
+
+      if (recentConversations.length === 0) {
+        console.log('[RAG:History] ✓ No previous conversations found');
+        return [];
+      }
+
+      console.log('[RAG:History] Found', recentConversations.length, 'recent conversations');
+
+      // Get messages from these conversations (limit to last 10 messages total)
+      const conversationIds = recentConversations.map(c => c.id);
+      const messages = await msgRepo
+        .createQueryBuilder('message')
+        .where('message.conversation_id IN (:...ids)', { ids: conversationIds })
+        .orderBy('message.created_at', 'DESC')
+        .take(10)
+        .getMany();
+
+      // Reverse to get chronological order
+      messages.reverse();
+
+      console.log('[RAG:History] ✓ Found', messages.length, 'recent messages');
+
+      // Convert to Gemini history format
+      return messages.map(msg => ({
+        role: msg.role,
+        parts: [msg.content]
+      }));
+    }
+
+    // Case 3: No conversation_id and no account_id
+    console.log('[RAG:History] No conversation_id or account_id, returning empty history');
+    return [];
   } catch (error) {
-    console.error('[RAG] Get history error:', error);
+    console.error('[RAG:History] ❌ Get history error:', error.message);
     return [];
   }
 }

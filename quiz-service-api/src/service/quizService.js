@@ -458,7 +458,18 @@ class QuizService {
                 `/questions/internal/${questionId}`,
                 null
               );
-              return response.data.data;
+              // Get question data
+              const questionData = response.data.data;
+              
+              // Remove is_correct field from all answers
+              if (questionData && questionData.answers) {
+                questionData.answers = questionData.answers.map(answer => {
+                  const { is_correct, ...answerWithoutCorrect } = answer;
+                  return answerWithoutCorrect;
+                });
+              }
+              
+              return questionData;
             } catch (error) {
               console.error(`Failed to fetch question ${questionId}:`, error.message);
               return null;
