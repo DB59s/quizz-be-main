@@ -1043,7 +1043,7 @@ class SubmissionService {
             headers: { 'x-service-call': 'true' }
           });
           if (classQuizResponse.data?.success && classQuizResponse.data?.data) {
-            const quizzId = classQuizResponse.data.data.quizz_id;
+            const quizzId = classQuizResponse?.data?.data?.quizz_id;
             if (quizIds.includes(quizzId)) {
               teacherSubmissions.push(submission);
             }
@@ -1148,17 +1148,21 @@ class SubmissionService {
       for (const submission of submissions) {
         try {
           // Get ClassQuiz info
-          const classQuizResponse = await quizService('GET', `/class-quizzes/${submission.class_quiz_id}`);
+          const classQuizResponse = await quizService('GET', `/class-quizzes/${submission.class_quiz_id}`, null, {
+            headers: { 'x-service-call': 'true' }
+          });
 
-          if (classQuizResponse.success && classQuizResponse.data) {
-            const quizId = classQuizResponse.data.quizz_id;
+          if (classQuizResponse.data?.success && classQuizResponse.data?.data) {
+            const quizId = classQuizResponse.data.data.quizz_id;
 
             // Get Quiz info
-            const quizResponse = await quizService('GET', `/quizzes/${quizId}`);
+            const quizResponse = await quizService('GET', `/quizzes/${quizId}`, null, {
+              headers: { 'x-service-call': 'true' }
+            });
 
-            if (quizResponse.success && quizResponse.data) {
+            if (quizResponse.data?.success && quizResponse.data?.data) {
               progress.push({
-                quiz_name: quizResponse.data.name,
+                quiz_name: quizResponse.data.data.name,
                 score: Math.round(submission.score * 100) / 100,
                 date: submission.submission_time.toISOString().split('T')[0]
               });
