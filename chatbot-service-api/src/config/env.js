@@ -23,7 +23,10 @@ module.exports = {
   // Gemini API
   GEMINI_API_KEY: process.env.GEMINI_API_KEY,
 
-  // External service URLs (no authentication required)
+  // External service URLs
   QUESTION_SERVICE_BASEURL: process.env.QUESTION_SERVICE_BASEURL ,
-  KNOWLEDGE_SERVICE_BASEURL: process.env.KNOWLEDGE_SERVICE_BASEURL 
+  KNOWLEDGE_SERVICE_BASEURL: process.env.KNOWLEDGE_SERVICE_BASEURL,
+
+  // API Tokens for internal service communication
+  QUESTION_SERVICE_API_TOKEN: process.env.QUESTION_SERVICE_API_TOKEN
 };

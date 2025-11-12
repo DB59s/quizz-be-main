@@ -1,0 +1,6 @@
+{
+  "filename": "cau-truc-du-lieu-chuong3.txt",
+  "content": "CHƯƠNG 3: CẤU TRÚC DỮ LIỆU TUYẾN TÍNH\n\n3.1 Mảng (Array)\n\nMảng là một cấu trúc dữ liệu cơ bản được sử dụng để lưu trữ một tập hợp các phần tử cùng kiểu dữ liệu. Các phần tử trong mảng được lưu trữ liên tiếp trong bộ nhớ và có thể được truy cập thông qua chỉ số (index).\n\nĐặc điểm của mảng:\n- Truy cập ngẫu nhiên: O(1)\n- Chèn/Xóa ở giữa: O(n)\n- Kích thước cố định (trong hầu hết các ngôn ngữ)\n\n3.2 Danh sách liên kết (Linked List)\n\nDanh sách liên kết là một cấu trúc dữ liệu trong đó các phần tử (gọi là node) được liên kết với nhau thông qua con trỏ. Mỗi node chứa dữ liệu và một con trỏ trỏ đến node tiếp theo.\n\nĐặc điểm của danh sách liên kết:\n- Truy cập tuần tự: O(n)\n- Chèn/Xóa ở đầu: O(1)\n- Kích thước động\n- Sử dụng bộ nhớ linh hoạt hơn mảng",
+  "recreate_collection": false
+}
+

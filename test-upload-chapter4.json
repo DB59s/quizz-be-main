@@ -1,0 +1,6 @@
+{
+  "filename": "cau-truc-du-lieu-chuong4.txt",
+  "content": "CHƯƠNG 4: CẤU TRÚC DỮ LIỆU PHI TUYẾN\n\n4.1 Cây (Tree)\n\nCây là một cấu trúc dữ liệu phi tuyến bao gồm các node được kết nối bởi các cạnh. Mỗi cây có một node gốc (root) và các node con (children).\n\nĐặc điểm của cây:\n- Có một node gốc duy nhất\n- Mỗi node (ngoại trừ gốc) có đúng một node cha\n- Không có chu kỳ\n- Được sử dụng rộng rãi trong các ứng dụng thực tế\n\n4.2 Đồ thị (Graph)\n\nĐồ thị là một cấu trúc dữ liệu bao gồm một tập hợp các đỉnh (vertices) và các cạnh (edges) kết nối chúng. Đồ thị có thể là có hướng hoặc vô hướng.\n\nĐặc điểm của đồ thị:\n- Có thể có chu kỳ\n- Mỗi đỉnh có thể có nhiều cạnh\n- Được sử dụng để biểu diễn các mối quan hệ phức tạp",
+  "recreate_collection": false
+}
+

@@ -103,16 +103,24 @@ async function processMessage(data, account_id) {
 async function classifyQuery(prompt, context, history) {
   try {
     console.log('[RAG:Classify] Analyzing context...');
+    console.log('[RAG:Classify] Context received:', JSON.stringify(context));
 
-    // Type 1: FE specifies question_bank with ID
-    if (context?.type === 'question' && context.id) {
+    // Type 1: FE specifies question_bank with question_id
+    if (context?.force_type === 'question_bank' && context.question_id) {
       console.log('[RAG:Classify] ✓ Type 1: question_bank (Frontend specified)');
+      console.log('[RAG:Classify] - Question ID:', context.question_id);
+      return { type: 'question_bank', context_id: context.question_id };
+    }
+
+    // Backward compatibility: support old format (type: 'question', id: '...')
+    if (context?.type === 'question' && context.id) {
+      console.log('[RAG:Classify] ✓ Type 1: question_bank (Frontend specified - old format)');
       console.log('[RAG:Classify] - Question ID:', context.id);
       return { type: 'question_bank', context_id: context.id };
     }
 
     // Type 2: FE specifies knowledge_base
-    if (context?.type === 'knowledge') {
+    if (context?.force_type === 'knowledge_base' || context?.type === 'knowledge') {
       console.log('[RAG:Classify] ✓ Type 2: knowledge_base (Frontend specified)');
       return { type: 'knowledge_base' };
     }
@@ -191,31 +199,36 @@ async function getRetrievalData(classification, prompt) {
         const url = `${env.QUESTION_SERVICE_BASEURL}/questions/internal/${context_id}`;
         console.log('[RAG:Retrieval] URL:', url);
 
-        const response = await axios.get(url);
-        console.log('[RAG:Retrieval] ✓ Question retrieved successfully');
-        console.log('[RAG:Retrieval] - Question data:', JSON.stringify(response.data.data).substring(0, 200) + '...');
-        return response.data.data;
-      }
-
-      // Case 2: Search question by text (if Question Service supports search)
-      console.log('[RAG:Retrieval] No question_id provided, trying to search by text...');
-      try {
-        const searchUrl = `${env.QUESTION_SERVICE_BASEURL}/questions/internal/search`;
-        console.log('[RAG:Retrieval] Search URL:', searchUrl);
-
-        const searchResponse = await axios.post(searchUrl, { query: prompt, limit: 1 });
-
-        if (searchResponse.data.data && searchResponse.data.data.length > 0) {
-          console.log('[RAG:Retrieval] ✓ Found question by search');
-          return searchResponse.data.data[0];
+        try {
+          const response = await axios.get(url, {
+            headers: {
+              'Authorization': `Bearer ${env.QUESTION_SERVICE_API_TOKEN}`
+            }
+          });
+          
+          console.log('[RAG:Retrieval] ✓ Question retrieved successfully');
+          
+          // Remove is_correct field from answers to hide correct answer from student
+          const questionData = response.data.data;
+          
+          console.log('[RAG:Retrieval] - Question data (answers filtered):', JSON.stringify(questionData).substring(0, 200) + '...');
+          return questionData;
+        } catch (error) {
+          console.error('[RAG:Retrieval] ❌ Failed to fetch question:', error.message);
+          if (error.response) {
+            console.error('[RAG:Retrieval] - Status:', error.response.status);
+            console.error('[RAG:Retrieval] - Data:', JSON.stringify(error.response.data));
+          }
+          return null;
         }
-        console.log('[RAG:Retrieval] ⚠ No questions found by search');
-      } catch (searchError) {
-        console.warn('[RAG:Retrieval] ⚠ Question search endpoint not available:', searchError.message);
-        console.warn('[RAG:Retrieval] Falling back to knowledge_base');
       }
 
-      // Fallback: Treat as knowledge_base if search fails
+      // Case 2: No question_id provided - Question Service doesn't support search
+      console.log('[RAG:Retrieval] ⚠ No question_id provided');
+      console.log('[RAG:Retrieval] Question Service does not support text search');
+      console.log('[RAG:Retrieval] Falling back to knowledge_base');
+      
+      // Fallback: Treat as knowledge_base if no question_id
       return null;
     }
 
@@ -253,15 +266,17 @@ async function getRetrievalData(classification, prompt) {
  */
 function buildFinalPrompt(type, retrievalData, prompt) {
   if (type === 'question_bank' && retrievalData) {
-    return `Dựa vào dữ liệu câu hỏi và đáp án sau (JSON):
+    return `Dựa vào dữ liệu câu hỏi sau (JSON):
 ${JSON.stringify(retrievalData, null, 2)}
 
-Hãy giải thích chi tiết cho câu hỏi của học sinh: "${prompt}"
+Hãy giải thích và hướng dẫn học sinh trả lời câu hỏi: "${prompt}"
 
 Yêu cầu:
-- Giải thích rõ ràng, dễ hiểu
-- Nếu có đáp án đúng, hãy giải thích tại sao đó là đáp án đúng
-- Nếu có các đáp án sai, hãy giải thích tại sao chúng sai`;
+- KHÔNG được tiết lộ đáp án đúng trực tiếp
+- Giải thích các khái niệm liên quan đến câu hỏi
+- Phân tích từng đáp án một cách khách quan
+- Hướng dẫn cách suy luận để tìm ra đáp án đúng
+- Giúp học sinh tự rút ra kết luận`;
   }
 
   if (type === 'knowledge_base' && retrievalData && Array.isArray(retrievalData)) {
@@ -486,4 +501,3 @@ module.exports = {
   getHistory,
   saveToHistory
 };
-

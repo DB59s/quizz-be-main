@@ -406,6 +406,7 @@ services:
       GEMINI_API_KEY: AIzaSyAeayCsv1fWTQkbHHNny_EmIjZQl5zhax8
       # External Services (no authentication required)
       QUESTION_SERVICE_BASEURL: http://question-service-api:9012/api/v1
+      QUESTION_SERVICE_API_TOKEN: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
       KNOWLEDGE_SERVICE_BASEURL: http://knowledge-service-api:9009
     ports:
       - "9013:9013"
