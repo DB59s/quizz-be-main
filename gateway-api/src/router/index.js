@@ -10,6 +10,8 @@ const quizRouter = require('./quiz.router');
 const classQuizRouter = require('./classQuiz.router');
 const submissionRouter = require('./submission.router');
 const dashboardRouter = require('./dashboard.router');
+const chatbotRouter = require('./chatbot.router');
+const knowledgeRouter = require('./knowledge.router');
 
 const router = express.Router();
 
@@ -32,6 +34,8 @@ router.use('/quizzes', quizRouter);
 router.use('/class-quizzes', classQuizRouter);
 router.use('/submissions', submissionRouter);
 router.use('/dashboard', dashboardRouter);
+router.use('/chatbot', chatbotRouter);
+router.use('/knowledge', knowledgeRouter);
 
 /**
  * @swagger
@@ -122,6 +126,7 @@ router.get('/', (req, res) => {
       quizzes: '/api/v1/quizzes',
       classQuizzes: '/api/v1/class-quizzes',
       submissions: '/api/v1/submissions',
+      chatbot: '/api/v1/chatbot',
       docs: '/api-docs'
     }
   });
