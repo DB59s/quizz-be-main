@@ -464,7 +464,7 @@ class QuizService {
               // Remove is_correct field from all answers
               if (questionData && questionData.answers) {
                 questionData.answers = questionData.answers.map(answer => {
-                  const { is_correct, ...answerWithoutCorrect } = answer;
+                  const { is_true, ...answerWithoutCorrect } = answer;
                   return answerWithoutCorrect;
                 });
               }

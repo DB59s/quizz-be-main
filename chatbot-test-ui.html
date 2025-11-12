@@ -281,6 +281,106 @@
         .debug-info strong {
             color: #856404;
         }
+
+        .question-bank-panel {
+            display: none;
+            background: #e8f4f8;
+            border: 2px solid #667eea;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 10px 30px;
+        }
+
+        .question-bank-panel.active {
+            display: block;
+        }
+
+        .question-bank-panel h4 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 10px 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus {
+            border-color: #667eea;
+        }
+
+        .form-group textarea {
+            width: 100%;
+            padding: 10px 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.3s;
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .form-group textarea:focus {
+            border-color: #667eea;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .btn-submit {
+            flex: 1;
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: transform 0.2s;
+        }
+
+        .btn-submit:hover {
+            transform: scale(1.02);
+        }
+
+        .btn-clear {
+            padding: 10px 20px;
+            background: #f5f5f5;
+            color: #666;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .btn-clear:hover {
+            background: #e0e0e0;
+        }
     </style>
 </head>
 <body>
@@ -307,6 +407,31 @@
                 <button class="scenario-btn" data-scenario="general">
                     💬 General Chat (Gemini Direct)
                 </button>
+            </div>
+        </div>
+
+        <!-- Question Bank Panel -->
+        <div class="question-bank-panel" id="questionBankPanel">
+            <h4>🎯 Question Bank - Nhập thông tin câu hỏi</h4>
+            <div class="form-group">
+                <label for="questionId">ID Câu hỏi (Question ID):</label>
+                <input
+                    type="text"
+                    id="questionId"
+                    placeholder="Ví dụ: 6734c1f3eab52d34087cb4aa"
+                    autocomplete="off"
+                >
+            </div>
+            <div class="form-group">
+                <label for="questionContent">Nội dung câu hỏi (Question Content):</label>
+                <textarea
+                    id="questionContent"
+                    placeholder="Ví dụ: Tiến trình trong hệ điều hành là gì?"
+                ></textarea>
+            </div>
+            <div class="form-actions">
+                <button class="btn-submit" id="submitQuestionBtn">Gửi câu hỏi</button>
+                <button class="btn-clear" id="clearFormBtn">Xóa</button>
             </div>
         </div>
 
@@ -367,6 +492,11 @@
         const statusText = document.getElementById('statusText');
         const typingIndicator = document.getElementById('typingIndicator');
         const scenarioBtns = document.querySelectorAll('.scenario-btn');
+        const questionBankPanel = document.getElementById('questionBankPanel');
+        const questionIdInput = document.getElementById('questionId');
+        const questionContentInput = document.getElementById('questionContent');
+        const submitQuestionBtn = document.getElementById('submitQuestionBtn');
+        const clearFormBtn = document.getElementById('clearFormBtn');
 
         // Sample questions for each scenario
         const sampleQuestions = {
@@ -486,6 +616,7 @@
                 const debugDiv = document.createElement('div');
                 debugDiv.className = 'debug-info';
                 debugDiv.innerHTML = `
+                    ${meta.questionId ? `<strong>Question ID:</strong> ${meta.questionId}<br>` : ''}
                     ${meta.conversationId ? `<strong>Conversation ID:</strong> ${meta.conversationId}<br>` : ''}
                     ${meta.responseTime ? `<strong>Response Time:</strong> ${meta.responseTime}ms<br>` : ''}
                     ${meta.error ? `<strong>Error:</strong> true` : ''}
@@ -513,23 +644,111 @@
         scenarioBtns.forEach(btn => {
             btn.addEventListener('click', () => {
                 const scenario = btn.dataset.scenario;
-                
+
                 // Update active state
                 scenarioBtns.forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
-                
+
                 // Set current scenario
                 currentScenario = scenario;
-                
-                // Show sample question
-                const samples = sampleQuestions[scenario];
-                const randomSample = samples[Math.floor(Math.random() * samples.length)];
-                messageInput.value = randomSample;
-                messageInput.focus();
-                
-                addMessage('bot', `✅ Đã chọn scenario: <strong>${btn.textContent.trim()}</strong><br>Câu hỏi mẫu đã được điền sẵn. Bạn có thể chỉnh sửa hoặc gửi luôn!`);
+
+                // Show/hide Question Bank panel
+                if (scenario === 'question_bank') {
+                    questionBankPanel.classList.add('active');
+                    addMessage('bot', `✅ Đã chọn scenario: <strong>${btn.textContent.trim()}</strong><br>Vui lòng nhập ID và nội dung câu hỏi vào form bên dưới.`);
+                    scrollToBottom();
+                } else {
+                    questionBankPanel.classList.remove('active');
+
+                    // Show sample question for other scenarios
+                    const samples = sampleQuestions[scenario];
+                    const randomSample = samples[Math.floor(Math.random() * samples.length)];
+                    messageInput.value = randomSample;
+                    messageInput.focus();
+
+                    addMessage('bot', `✅ Đã chọn scenario: <strong>${btn.textContent.trim()}</strong><br>Câu hỏi mẫu đã được điền sẵn. Bạn có thể chỉnh sửa hoặc gửi luôn!`);
+                    scrollToBottom();
+                }
+            });
+        });
+
+        // Handle question bank form submission
+        submitQuestionBtn.addEventListener('click', () => {
+            const questionId = questionIdInput.value.trim();
+            const questionContent = questionContentInput.value.trim();
+
+            if (!questionId && !questionContent) {
+                alert('Vui lòng nhập ít nhất ID hoặc nội dung câu hỏi!');
+                return;
+            }
+
+            if (!socket || !socket.connected) {
+                alert('Chưa kết nối đến server!');
+                return;
+            }
+
+            // Build the query message
+            let queryMessage = '';
+            if (questionId && questionContent) {
+                queryMessage = `Question ID: ${questionId}\nNội dung: ${questionContent}`;
+            } else if (questionId) {
+                queryMessage = `Tìm thông tin về câu hỏi có ID: ${questionId}`;
+            } else {
+                queryMessage = questionContent;
+            }
+
+            // Add user message to chat
+            addMessage('user', queryMessage);
+
+            // Show typing indicator
+            typingIndicator.classList.add('active');
+            scrollToBottom();
+
+            // Prepare data with question_id in context if provided
+            const data = {
+                account_id: ACCOUNT_ID,
+                prompt: questionContent || `Tìm thông tin về câu hỏi có ID: ${questionId}`,
+                conversation_id: conversationId,
+                context: {
+                    force_type: 'question_bank',
+                    question_id: questionId || undefined
+                }
+            };
+
+            console.log('📤 Sending question bank query:', data);
+
+            // Send via Socket.IO with callback
+            const startTime = Date.now();
+            socket.emit('chat:message', data, (response) => {
+                const responseTime = Date.now() - startTime;
+                console.log('📥 Response received:', response);
+
+                // Hide typing indicator
+                typingIndicator.classList.remove('active');
+
+                if (response.success) {
+                    // Update conversation ID
+                    conversationId = response.data.conversation_id;
+
+                    // Add bot response
+                    addMessage('bot', response.data.response, {
+                        conversationId: conversationId,
+                        responseTime: responseTime,
+                        questionId: questionId
+                    });
+                } else {
+                    addMessage('bot', '❌ Lỗi: ' + response.message, { error: true });
+                }
+
                 scrollToBottom();
             });
+        });
+
+        // Handle clear form button
+        clearFormBtn.addEventListener('click', () => {
+            questionIdInput.value = '';
+            questionContentInput.value = '';
+            questionIdInput.focus();
         });
 
         // Event listeners
