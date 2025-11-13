@@ -17,7 +17,7 @@ const callQuizService = createServiceCaller(
  */
 async function createQuiz(req, res) {
   try {
-    const { name, description, question_ids } = req.body;
+    const { name, description, question_ids, total_time } = req.body;
 
     // Get teacher_id from token (set by requireRoleOnly middleware)
     const teacher_id = req.user?.teacher_id;
@@ -47,13 +47,25 @@ async function createQuiz(req, res) {
       });
     }
 
+    // Validate total_time if provided
+    if (total_time !== undefined && total_time !== null) {
+      if (typeof total_time !== 'number' || total_time <= 0) {
+        return res.status(400).json({
+          success: false,
+          error: 'Validation failed',
+          message: 'total_time must be a positive number (in seconds)'
+        });
+      }
+    }
+
     console.log(`[Gateway] Teacher ${teacher_id} creating quiz`);
 
     // Prepare request data
     const quizData = {
       name: name.trim(),
       description: description ? description.trim() : undefined,
-      question_ids
+      question_ids,
+      total_time: total_time || undefined
     };
 
     // Call quiz service with X-Teacher-ID header
@@ -244,7 +256,7 @@ async function getQuizById(req, res) {
 async function updateQuiz(req, res) {
   try {
     const { id } = req.params;
-    const { name, description, question_ids } = req.body;
+    const { name, description, question_ids, total_time } = req.body;
 
     // Get teacher_id from token
     const teacher_id = req.user?.teacher_id;
@@ -267,7 +279,7 @@ async function updateQuiz(req, res) {
     }
 
     // At least one field should be provided for update
-    if (!name && !description && !question_ids) {
+    if (!name && !description && !question_ids && total_time === undefined) {
       return res.status(400).json({
         success: false,
         error: 'Validation failed',
@@ -284,6 +296,17 @@ async function updateQuiz(req, res) {
       });
     }
 
+    // Validate total_time if provided
+    if (total_time !== undefined && total_time !== null) {
+      if (typeof total_time !== 'number' || total_time <= 0) {
+        return res.status(400).json({
+          success: false,
+          error: 'Validation failed',
+          message: 'total_time must be a positive number (in seconds)'
+        });
+      }
+    }
+
     console.log(`[Gateway] Teacher ${teacher_id} updating quiz: ${id}`);
 
     // Prepare update data
@@ -291,6 +314,7 @@ async function updateQuiz(req, res) {
     if (name) updateData.name = name.trim();
     if (description !== undefined) updateData.description = description ? description.trim() : null;
     if (question_ids) updateData.question_ids = question_ids;
+    if (total_time !== undefined) updateData.total_time = total_time;
 
     // Call quiz service with x-teacher-id header
     try {
