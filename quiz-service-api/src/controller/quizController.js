@@ -59,7 +59,7 @@ class QuizController {
         });
       }
 
-      const { name, description, question_ids } = req.body;
+      const { name, description, question_ids , total_time } = req.body;
 
       // Validate required fields
       if (!name) {
@@ -81,6 +81,7 @@ class QuizController {
         name,
         description,
         teacher_id,
+        total_time,
         question_ids
       });
 
