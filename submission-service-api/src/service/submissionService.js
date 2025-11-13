@@ -66,6 +66,19 @@ class SubmissionService {
         throw new Error('Quiz submission deadline has passed');
       }
 
+      // Step 2.5: Validate total_time if quiz has time limit
+      if (classQuiz.quiz && classQuiz.quiz.total_time) {
+        const quizTimeLimit = classQuiz.quiz.total_time; // in seconds
+
+        if (!total_time) {
+          throw new Error('total_time is required for this quiz');
+        }
+
+        if (total_time > quizTimeLimit) {
+          throw new Error(`Submission time (${total_time}s) exceeds quiz time limit (${quizTimeLimit}s)`);
+        }
+      }
+
       console.log("dữ liệu của class quiz như sau  " , classQuiz);
 
       const class_id = classQuiz.class_id;

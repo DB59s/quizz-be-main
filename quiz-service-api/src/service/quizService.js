@@ -21,7 +21,7 @@ class QuizService {
     await queryRunner.startTransaction();
 
     try {
-      const { name, description, teacher_id, question_ids } = quizData;
+      const { name, description, teacher_id, question_ids, total_time } = quizData;
 
       // Validate required fields
       if (!name || !name.trim()) {
@@ -43,12 +43,22 @@ class QuizService {
         throw error;
       }
 
+      // Validate total_time if provided
+      if (total_time !== undefined && total_time !== null) {
+        if (typeof total_time !== 'number' || total_time <= 0) {
+          const error = new Error('Total time must be a positive number (in seconds)');
+          error.code = 'INVALID_TOTAL_TIME';
+          throw error;
+        }
+      }
+
       // Create quiz
       const quizRepository = queryRunner.manager.getRepository('Quiz');
       const quiz = quizRepository.create({
         name: name.trim(),
         description: description ? description.trim() : null,
-        teacher_id
+        teacher_id,
+        total_time: total_time || null
       });
       const savedQuiz = await quizRepository.save(quiz);
 
@@ -71,6 +81,7 @@ class QuizService {
         name: savedQuiz.name,
         description: savedQuiz.description,
         teacher_id: savedQuiz.teacher_id,
+        total_time: savedQuiz.total_time,
         created_at: savedQuiz.created_at,
         updated_at: savedQuiz.updated_at,
         question_ids
@@ -127,6 +138,7 @@ class QuizService {
           name: q.name,
           description: q.description,
           teacher_id: q.teacher_id,
+          total_time: q.total_time,
           created_at: q.created_at,
           updated_at: q.updated_at
         })),
@@ -214,6 +226,7 @@ class QuizService {
         name: quiz.name,
         description: quiz.description,
         teacher_id: quiz.teacher_id,
+        total_time: quiz.total_time,
         created_at: quiz.created_at,
         updated_at: quiz.updated_at,
         questions
@@ -489,6 +502,7 @@ class QuizService {
         name: quiz.name,
         description: quiz.description,
         teacher_id: quiz.teacher_id,
+        total_time: quiz.total_time,
         class_id: classQuiz.class_id,
         start_time: classQuiz.start_time,
         end_time: classQuiz.end_time,
