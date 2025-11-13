@@ -283,6 +283,14 @@ class QuizService {
       if (updateData.description !== undefined) {
         quiz.description = updateData.description ? updateData.description.trim() : null;
       }
+      if (updateData.total_time !== undefined) {
+        if (updateData.total_time !== null && (typeof updateData.total_time !== 'number' || updateData.total_time <= 0)) {
+          const error = new Error('Total time must be a positive number (in seconds)');
+          error.code = 'INVALID_TOTAL_TIME';
+          throw error;
+        }
+        quiz.total_time = updateData.total_time;
+      }
 
       // Save quiz
       await quizRepository.save(quiz);
