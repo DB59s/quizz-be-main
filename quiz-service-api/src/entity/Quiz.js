@@ -23,6 +23,11 @@ module.exports = new EntitySchema({
       length: 255,
       nullable: false,
     },
+    total_time: {
+      type: 'integer',
+      nullable: true,
+      comment: 'Total time to complete quiz in seconds',
+    },
     created_at: {
       type: 'timestamp',
       nullable: false,
