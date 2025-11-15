@@ -221,20 +221,26 @@ class GeminiService {
 
   /**
    * Generate quiz questions from PDF file with retry mechanism
-   * NOTE: This API is limited to 10 questions max. For larger PDFs, use startChunkedQuizGeneration()
+   * NOTE: This API can handle up to 40 questions. For larger PDFs, use startChunkedQuizGeneration()
    */
-  async generateQuizFromPDF(filePath, maxRetries = 3, maxQuestions = 10) {
+  async generateQuizFromPDF(filePath, maxRetries = 3, maxQuestions = 40) {
     const prompt = `Bạn là hệ thống tạo câu hỏi trắc nghiệm từ tài liệu.
 
 NHIỆM VỤ:
-Trích xuất CHÍNH XÁC ${maxQuestions} câu hỏi ĐẦU TIÊN từ tài liệu PDF.
+Trích xuất TỐI ĐA ${maxQuestions} câu hỏi ĐẦU TIÊN từ tài liệu PDF.
 
 YÊU CẦU NGHIÊM NGẶT:
-1. CHỈ TRẢ VỀ ĐÚNG ${maxQuestions} CÂU HỎI, KHÔNG NHIỀU HƠN, KHÔNG ÍT HƠN.
-2. Nếu tài liệu có ít hơn ${maxQuestions} câu hỏi → trả về hết số câu hỏi có.
-3. CHỈ TRẢ VỀ JSON ARRAY, KHÔNG THÊM BẤT KỲ TEXT NÀO KHÁC.
-4. Không được tự tạo thêm câu hỏi nếu tài liệu không có.
-5. Nếu tài liệu có câu hỏi tự luận → chuyển sang dạng trắc nghiệm hợp lý nhất.
+1. TRẢ VỀ TỐI ĐA ${maxQuestions} CÂU HỎI (có thể ít hơn nếu tài liệu không đủ).
+2. MỖI CÂU HỎI PHẢI HOÀN CHỈNH 100% - KHÔNG CẮT DỞ GIỮA CHỪNG.
+3. Nếu câu hỏi thứ ${maxQuestions} chưa hoàn chỉnh → BỎ QUA, chỉ trả về ${maxQuestions - 1} câu.
+4. CHỈ TRẢ VỀ JSON ARRAY, KHÔNG THÊM BẤT KỲ TEXT NÀO KHÁC.
+5. Không được tự tạo thêm câu hỏi nếu tài liệu không có.
+6. Nếu tài liệu có câu hỏi tự luận → chuyển sang dạng trắc nghiệm hợp lý nhất.
+
+QUAN TRỌNG - XỬ LÝ KÝ TỰ ĐẶC BIỆT:
+- Nếu nội dung có dấu ngoặc kép (") → KHÔNG DÙNG dấu ngoặc kép, thay bằng dấu nháy đơn (') hoặc bỏ đi.
+- Ví dụ: "Khẳng định "Song thị" đúng hay sai?" → "Khẳng định 'Song thị' đúng hay sai?"
+- Nếu có ký tự đặc biệt khác (\\, /, \n) → escape hoặc thay thế phù hợp.
 
 FORMAT TRẢ RA (BẮT BUỘC):
 [
@@ -256,7 +262,7 @@ FORMAT TRẢ RA (BẮT BUỘC):
 ]
 
 QUY TẮC CHI TIẾT:
-- "content": Nội dung câu hỏi
+- "content": Nội dung câu hỏi (thay dấu " bằng ' nếu cần)
 - "level": chỉ nhận giá trị {1,2,3,4}:
   EASY = 1
   MEDIUM = 2
@@ -266,11 +272,11 @@ QUY TẮC CHI TIẾT:
   "1" = chỉ có 1 đáp án đúng
   "2" = có nhiều đáp án đúng
 - "answers":
-  - "content": nội dung đáp án
+  - "content": nội dung đáp án (thay dấu " bằng ' nếu cần)
   - "is_true": true hoặc false
 
 CHỈ TRẢ VỀ JSON ARRAY HỢP LỆ, KHÔNG GIẢI THÍCH THÊM.
-TRẢ VỀ ĐÚNG ${maxQuestions} CÂU HỎI HOÀN CHỈNH, KHÔNG CẮT DỞ GIỮA CHỪNG.`;
+ƯU TIÊN CHẤT LƯỢNG HƠN SỐ LƯỢNG - CHỈ TRẢ VỀ CÂU HỎI HOÀN CHỈNH.`;
 
     let lastError = null;
 
@@ -365,10 +371,10 @@ TRẢ VỀ ĐÚNG ${maxQuestions} CÂU HỎI HOÀN CHỈNH, KHÔNG CẮT DỞ GI
    * This method automatically fetches multiple batches if needed
    * @param {string} filePath - Path to PDF file
    * @param {number} totalQuestions - Total questions desired
-   * @param {number} batchSize - Questions per batch (default: 10)
+   * @param {number} batchSize - Questions per batch (default: 40)
    * @returns {Promise<Array>} All questions
    */
-  async generateQuizWithAutoBatch(filePath, totalQuestions, batchSize = 10) {
+  async generateQuizWithAutoBatch(filePath, totalQuestions, batchSize = 40) {
     console.log(`[GeminiService] Auto-batch generation: ${totalQuestions} questions, batch size: ${batchSize}`);
 
     const allQuestions = [];
@@ -458,12 +464,12 @@ CHỈ TRẢ VỀ JSON HỢP LỆ, KHÔNG CẮT DỞ GIỮA CHỪNG.`;
    * Start chunked quiz generation from PDF
    * Returns session ID for polling
    * @param {string} filePath - Path to PDF file
-   * @param {number} questionsPerChunk - Questions per chunk (default: 10, max: 12)
+   * @param {number} questionsPerChunk - Questions per chunk (default: 40, max: 40)
    * @returns {Promise<Object>} Session info
    */
-  async startChunkedQuizGeneration(filePath, questionsPerChunk = 10) {
-    // Limit to max 12 to avoid response too large
-    questionsPerChunk = Math.min(questionsPerChunk, 12);
+  async startChunkedQuizGeneration(filePath, questionsPerChunk = 40) {
+    // Limit to max 40 (with maxOutputTokens 8192 should be safe)
+    questionsPerChunk = Math.min(questionsPerChunk, 40);
     const sessionId = uuidv4();
 
     console.log(`[GeminiService] Starting chunked generation, session: ${sessionId}`);
@@ -504,13 +510,18 @@ CHỈ TRẢ VỀ JSON HỢP LỆ, KHÔNG CẮT DỞ GIỮA CHỪNG.`;
       const prompt = `Bạn là hệ thống tạo câu hỏi trắc nghiệm từ tài liệu.
 
 NHIỆM VỤ:
-Trích xuất CHÍNH XÁC ${questionsPerChunk} câu hỏi ĐẦU TIÊN từ tài liệu PDF.
+Trích xuất TỐI ĐA ${questionsPerChunk} câu hỏi ĐẦU TIÊN từ tài liệu PDF.
 
 YÊU CẦU NGHIÊM NGẶT:
-1. CHỈ TRẢ VỀ ĐÚNG ${questionsPerChunk} CÂU HỎI, KHÔNG NHIỀU HỚN, KHÔNG ÍT HƠN.
-2. BẮT ĐẦU TỪ CÂU HỎI ĐẦU TIÊN TRONG TÀI LIỆU.
-3. CHỈ TRẢ VỀ JSON ARRAY, KHÔNG GIẢI THÍCH, KHÔNG THÊM TEXT.
-4. Nếu tài liệu có ít hơn ${questionsPerChunk} câu, chỉ trả về số câu có sẵn.
+1. TRẢ VỀ TỐI ĐA ${questionsPerChunk} CÂU HỎI (có thể ít hơn nếu tài liệu không đủ).
+2. MỖI CÂU HỎI PHẢI HOÀN CHỈNH 100% - KHÔNG CẮT DỞ GIỮA CHỪNG.
+3. BẮT ĐẦU TỪ CÂU HỎI ĐẦU TIÊN TRONG TÀI LIỆU.
+4. CHỈ TRẢ VỀ JSON ARRAY, KHÔNG GIẢI THÍCH, KHÔNG THÊM TEXT.
+5. Nếu tài liệu có ít hơn ${questionsPerChunk} câu, chỉ trả về số câu có sẵn.
+
+QUAN TRỌNG - XỬ LÝ KÝ TỰ ĐẶC BIỆT:
+- Nếu nội dung có dấu ngoặc kép (") → thay bằng dấu nháy đơn (') hoặc bỏ đi.
+- Ví dụ: "Khẳng định "Song thị" đúng hay sai?" → "Khẳng định 'Song thị' đúng hay sai?"
 
 FORMAT TRẢ RA (BẮT BUỘC):
 [
@@ -532,7 +543,7 @@ FORMAT TRẢ RA (BẮT BUỘC):
 ]
 
 QUY TẮC:
-- "content": Nội dung câu hỏi.
+- "content": Nội dung câu hỏi (thay dấu " bằng ' nếu cần)
 - "level": chỉ nhận giá trị {1,2,3,4} tương ứng:
   EASY = 1
   MEDIUM = 2
@@ -542,10 +553,10 @@ QUY TẮC:
   "1" = chỉ có 1 đáp án đúng
   "2" = có nhiều đáp án đúng
 - "answers":
-  - "content": đáp án
+  - "content": đáp án (thay dấu " bằng ' nếu cần)
   - "is_true": true/false
 
-CHỈ TRẢ VỀ JSON ARRAY HỢP LỆ, TỐI ĐA ${questionsPerChunk} CÂU HỎI.`;
+CHỈ TRẢ VỀ JSON ARRAY HỢP LỆ. ƯU TIÊN CHẤT LƯỢNG - CHỈ TRẢ VỀ CÂU HỎI HOÀN CHỈNH.`;
 
       // First attempt - get initial chunk
       console.log(`[GeminiService] Processing chunk 1 for session ${sessionId}`);
@@ -581,7 +592,7 @@ CHỈ TRẢ VỀ JSON ARRAY HỢP LỆ, TỐI ĐA ${questionsPerChunk} CÂU HỎ
         let chunkNumber = 2;
         let hasMore = true;
 
-        while (hasMore && chunkNumber <= 10) { // Max 10 chunks (10*10 = 100 questions max)
+        while (hasMore && chunkNumber <= 3) { // Max 3 chunks (3*40 = 120 questions max)
           console.log(`[GeminiService] Processing chunk ${chunkNumber} for session ${sessionId}`);
 
           const startQuestion = (chunkNumber - 1) * questionsPerChunk + 1;
@@ -592,15 +603,19 @@ CHỈ TRẢ VỀ JSON ARRAY HỢP LỆ, TỐI ĐA ${questionsPerChunk} CÂU HỎ
 YÊU CẦU CỤ THỂ:
 - BẮT ĐẦU: Câu hỏi số ${startQuestion}
 - KẾT THÚC: Câu hỏi số ${endQuestion}
-- TỔNG CỘNG: ${questionsPerChunk} câu hỏi
+- TỔNG CỘNG: TỐI ĐA ${questionsPerChunk} câu hỏi
 
 QUY TẮC:
 1. BỎ QUA ${(chunkNumber - 1) * questionsPerChunk} câu hỏi đầu tiên (đã xử lý).
-2. Chỉ trích xuất ${questionsPerChunk} câu TIẾP THEO.
-3. CHỈ TRẢ VỀ JSON ARRAY, không giải thích.
-4. Nếu không còn đủ ${questionsPerChunk} câu, trả về số câu còn lại.
+2. Chỉ trích xuất TỐI ĐA ${questionsPerChunk} câu TIẾP THEO.
+3. MỖI CÂU HỎI PHẢI HOÀN CHỈNH - KHÔNG CẮT DỞ.
+4. CHỈ TRẢ VỀ JSON ARRAY, không giải thích.
+5. Nếu không còn đủ ${questionsPerChunk} câu, trả về số câu còn lại.
+6. Nếu nội dung có dấu ngoặc kép (") → thay bằng dấu nháy đơn (').
 
-FORMAT: [{"content": "...", "level": 1, "type": "1", "answers": [...]}]`;
+FORMAT: [{"content": "...", "level": 1, "type": "1", "answers": [...]}]
+
+ƯU TIÊN CHẤT LƯỢNG - CHỈ TRẢ VỀ CÂU HỎI HOÀN CHỈNH.`;
 
           try {
             const chunkResponse = await this.analyzeFile(filePath, continuationPrompt);
