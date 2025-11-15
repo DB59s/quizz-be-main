@@ -786,6 +786,138 @@ class QuestionController {
       });
     }
   }
+
+  /**
+   * Bulk create questions from AI-generated data
+   * POST /api/v1/questions/bulk
+   */
+  async bulkCreateQuestions(req, res) {
+    try {
+      // Get teacher_id from header
+      const teacher_id = req.headers['x-teacher-id'];
+      
+      if (!teacher_id || teacher_id.trim() === '') {
+        return res.status(400).json({
+          success: false,
+          message: 'X-Teacher-ID header is required',
+          data: null
+        });
+      }
+
+      const { subject_id, questions } = req.body;
+
+      // Validate required fields
+      if (!subject_id || subject_id.trim() === '') {
+        return res.status(400).json({
+          success: false,
+          message: 'subject_id is required',
+          data: null
+        });
+      }
+
+      if (!questions || !Array.isArray(questions) || questions.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'questions array is required and must not be empty',
+          data: null
+        });
+      }
+
+      console.log(`[Question Service] Bulk creating ${questions.length} questions for teacher ${teacher_id}`);
+
+      // Validate each question
+      for (let i = 0; i < questions.length; i++) {
+        const q = questions[i];
+        
+        if (!q.content || q.content.trim() === '') {
+          return res.status(400).json({
+            success: false,
+            message: `Question ${i + 1}: content is required`,
+            data: null
+          });
+        }
+
+        if (!q.level || ![1, 2, 3, 4].includes(parseInt(q.level))) {
+          return res.status(400).json({
+            success: false,
+            message: `Question ${i + 1}: level must be 1, 2, 3, or 4`,
+            data: null
+          });
+        }
+
+        if (!q.type || !['1', '2'].includes(q.type.toString())) {
+          return res.status(400).json({
+            success: false,
+            message: `Question ${i + 1}: type must be "1" or "2"`,
+            data: null
+          });
+        }
+
+        if (!q.answers || !Array.isArray(q.answers) || q.answers.length < 2) {
+          return res.status(400).json({
+            success: false,
+            message: `Question ${i + 1}: at least 2 answers are required`,
+            data: null
+          });
+        }
+
+        // Validate answers
+        for (let j = 0; j < q.answers.length; j++) {
+          const ans = q.answers[j];
+          if (!ans.content || ans.content.trim() === '') {
+            return res.status(400).json({
+              success: false,
+              message: `Question ${i + 1}, Answer ${j + 1}: content is required`,
+              data: null
+            });
+          }
+          if (typeof ans.is_true !== 'boolean') {
+            return res.status(400).json({
+              success: false,
+              message: `Question ${i + 1}, Answer ${j + 1}: is_true must be boolean`,
+              data: null
+            });
+          }
+        }
+      }
+
+      // Create all questions
+      const createdQuestions = await questionService.bulkCreateQuestions(
+        teacher_id,
+        subject_id,
+        questions
+      );
+
+      console.log(`[Question Service] Successfully created ${createdQuestions.length} questions`);
+
+      return res.status(201).json({
+        success: true,
+        message: `Successfully created ${createdQuestions.length} questions`,
+        data: {
+          total: createdQuestions.length,
+          question_ids: createdQuestions.map(q => q.id)
+        }
+      });
+
+    } catch (error) {
+      console.error('Error bulk creating questions:', error);
+      
+      if (error.message.includes('Subject not found')) {
+        return res.status(404).json({
+          success: false,
+          message: error.message,
+          data: null
+        });
+      }
+
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to bulk create questions',
+        error: error.message,
+        data: null
+      });
+    }
+  }
 }
 
 module.exports = new QuestionController();

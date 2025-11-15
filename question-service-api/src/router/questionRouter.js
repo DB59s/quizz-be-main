@@ -14,6 +14,12 @@ router.get('/', questionController.getQuestions);
 router.post('/', questionController.createQuestion);
 
 /**
+ * POST /api/questions/bulk - Bulk create questions from AI-generated data
+ * MUST be before /:id route to avoid being matched by the generic :id route
+ */
+router.post('/bulk', questionController.bulkCreateQuestions);
+
+/**
  * GET /api/questions/teacher/:teacher_id/count - Get total questions count for teacher
  * MUST be before /:id route to avoid being matched by the generic :id route
  */

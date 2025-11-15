@@ -555,6 +555,83 @@ class QuestionService {
       throw error;
     }
   }
+
+  /**
+   * Bulk create questions from AI-generated data
+   * @param {string} teacher_id - Teacher ID
+   * @param {string} subject_id - Subject ID
+   * @param {Array} questions - Array of question objects
+   * @returns {Promise<Array>} Created questions
+   */
+  async bulkCreateQuestions(teacher_id, subject_id, questions) {
+    const queryRunner = AppDataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      const questionRepository = queryRunner.manager.getRepository('Question');
+      const answerRepository = queryRunner.manager.getRepository('Answer');
+      const subjectQuestionRepository = queryRunner.manager.getRepository('SubjectQuestion');
+      const subjectRepository = queryRunner.manager.getRepository('Subject');
+
+      // Verify subject exists
+      const subject = await subjectRepository.findOne({
+        where: { id: subject_id }
+      });
+
+      if (!subject) {
+        throw new Error(`Subject not found with id: ${subject_id}`);
+      }
+
+      const createdQuestions = [];
+
+      for (const questionData of questions) {
+        // Create question
+        const question = questionRepository.create({
+          content: questionData.content.trim(),
+          level: parseInt(questionData.level),
+          type: parseInt(questionData.type),
+          teacher_id: teacher_id
+        });
+
+        const savedQuestion = await questionRepository.save(question);
+
+        // Create answers
+        const answerPromises = questionData.answers.map(answerData => {
+          const answer = answerRepository.create({
+            content: answerData.content.trim(),
+            is_true: answerData.is_true,
+            question_id: savedQuestion.id
+          });
+          return answerRepository.save(answer);
+        });
+
+        await Promise.all(answerPromises);
+
+        // Create subject-question association
+        const subjectQuestion = subjectQuestionRepository.create({
+          question_id: savedQuestion.id,
+          subject_id: subject_id
+        });
+
+        await subjectQuestionRepository.save(subjectQuestion);
+
+        createdQuestions.push(savedQuestion);
+      }
+
+      await queryRunner.commitTransaction();
+      console.log(`[Question Service] Successfully created ${createdQuestions.length} questions in transaction`);
+      
+      return createdQuestions;
+
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      console.error('[Question Service] Error in bulk create, rolling back:', error);
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
+  }
 }
 
 module.exports = new QuestionService();
