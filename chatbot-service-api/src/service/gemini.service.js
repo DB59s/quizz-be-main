@@ -98,88 +98,124 @@ class GeminiService {
 
   /**
    * Try to salvage partial JSON by extracting complete objects
-   * This is a fallback when JSON.parse fails
+   * This is a fallback when JSON.parse fails due to truncation
+   * Strategy: Extract only COMPLETE question objects, ignore incomplete ones
    */
   _parsePartialJson(jsonText) {
     console.log('[GeminiService] Attempting partial JSON parsing...');
+    console.log(`[GeminiService] Input text length: ${jsonText.length}`);
 
     const questions = [];
-    let depth = 0;
-    let currentObject = '';
-    let inString = false;
-    let escapeNext = false;
 
-    // Skip the opening '['
-    let startIndex = jsonText.indexOf('[');
-    if (startIndex === -1) {
-      throw new Error('No array start found');
-    }
+    // Find all complete question objects using regex
+    // Match objects that have closing brace for answers array AND closing brace for question object
+    const objectPattern = /\{\s*"content"\s*:\s*"[^"]*"\s*,\s*"level"\s*:\s*\d+\s*,\s*"type"\s*:\s*"[^"]*"\s*,\s*"answers"\s*:\s*\[([\s\S]*?)\]\s*\}/g;
 
-    for (let i = startIndex + 1; i < jsonText.length; i++) {
-      const char = jsonText[i];
+    let match;
+    while ((match = objectPattern.exec(jsonText)) !== null) {
+      try {
+        const objText = match[0];
+        const obj = JSON.parse(objText);
 
-      // Handle string escaping
-      if (escapeNext) {
-        currentObject += char;
-        escapeNext = false;
-        continue;
-      }
-
-      if (char === '\\') {
-        currentObject += char;
-        escapeNext = true;
-        continue;
-      }
-
-      // Track if we're inside a string
-      if (char === '"') {
-        inString = !inString;
-        currentObject += char;
-        continue;
-      }
-
-      // Only track depth when not in string
-      if (!inString) {
-        if (char === '{') {
-          if (depth === 0) {
-            currentObject = '{';
-          } else {
-            currentObject += char;
-          }
-          depth++;
-        } else if (char === '}') {
-          depth--;
-          currentObject += char;
-
-          // Complete object found
-          if (depth === 0 && currentObject.trim()) {
-            try {
-              const obj = JSON.parse(currentObject);
-              // Validate structure
-              if (obj.content && obj.level && obj.type && Array.isArray(obj.answers)) {
-                questions.push(obj);
-                console.log(`[GeminiService] Extracted question ${questions.length}`);
-              }
-            } catch (e) {
-              console.warn(`[GeminiService] Failed to parse object: ${e.message}`);
+        // Validate structure
+        if (obj.content && obj.level && obj.type && Array.isArray(obj.answers)) {
+          // Validate all answers are complete
+          let allAnswersValid = true;
+          for (const answer of obj.answers) {
+            if (!answer.content || typeof answer.is_true !== 'boolean') {
+              allAnswersValid = false;
+              console.warn(`[GeminiService] Incomplete answer detected in question "${obj.content.substring(0, 30)}..."`);
+              break;
             }
-            currentObject = '';
           }
-        } else {
-          if (depth > 0) {
-            currentObject += char;
+
+          if (allAnswersValid && obj.answers.length > 0) {
+            questions.push(obj);
+            console.log(`[GeminiService] ✓ Extracted complete question ${questions.length}: "${obj.content.substring(0, 50)}..."`);
           }
         }
-      } else {
-        currentObject += char;
+      } catch (e) {
+        console.warn(`[GeminiService] Failed to parse matched object: ${e.message}`);
+      }
+    }
+
+    // If regex approach fails, try manual parsing
+    if (questions.length === 0) {
+      console.log('[GeminiService] Regex extraction failed, trying manual parsing...');
+
+      let depth = 0;
+      let currentObject = '';
+      let inString = false;
+      let escapeNext = false;
+
+      let startIndex = jsonText.indexOf('[');
+      if (startIndex === -1) startIndex = 0;
+
+      for (let i = startIndex; i < jsonText.length; i++) {
+        const char = jsonText[i];
+
+        if (escapeNext) {
+          currentObject += char;
+          escapeNext = false;
+          continue;
+        }
+
+        if (char === '\\') {
+          currentObject += char;
+          escapeNext = true;
+          continue;
+        }
+
+        if (char === '"') {
+          inString = !inString;
+          currentObject += char;
+          continue;
+        }
+
+        if (!inString) {
+          if (char === '{') {
+            if (depth === 0) {
+              currentObject = '{';
+            } else {
+              currentObject += char;
+            }
+            depth++;
+          } else if (char === '}') {
+            depth--;
+            currentObject += char;
+
+            if (depth === 0 && currentObject.trim()) {
+              try {
+                const obj = JSON.parse(currentObject);
+                if (obj.content && obj.level && obj.type && Array.isArray(obj.answers) && obj.answers.length > 0) {
+                  // Check if all answers are complete
+                  const allComplete = obj.answers.every(a => a.content && typeof a.is_true === 'boolean');
+                  if (allComplete) {
+                    questions.push(obj);
+                    console.log(`[GeminiService] ✓ Manual parse extracted question ${questions.length}`);
+                  }
+                }
+              } catch (e) {
+                // Ignore incomplete objects
+              }
+              currentObject = '';
+            }
+          } else if (depth > 0) {
+            currentObject += char;
+          }
+        } else {
+          currentObject += char;
+        }
       }
     }
 
     if (questions.length === 0) {
+      console.error('[GeminiService] No valid questions extracted. First 500 chars of input:');
+      console.error(jsonText.substring(0, 500));
       throw new Error('No valid questions extracted from partial JSON');
     }
 
-    console.log(`[GeminiService] Partial parsing recovered ${questions.length} questions`);
+    console.log(`[GeminiService] ✓ Partial parsing recovered ${questions.length} complete questions`);
     return questions;
   }
 
@@ -261,6 +297,18 @@ TRẢ VỀ ĐÚNG ${maxQuestions} CÂU HỎI HOÀN CHỈNH, KHÔNG CẮT DỞ GI
           console.log('[GeminiService] Standard JSON parsing successful');
         } catch (parseError) {
           console.warn(`[GeminiService] Standard JSON parsing failed: ${parseError.message}`);
+
+          // Log context around error position if available
+          const match = parseError.message.match(/position (\d+)/);
+          if (match) {
+            const errorPos = parseInt(match[1]);
+            const start = Math.max(0, errorPos - 100);
+            const end = Math.min(jsonText.length, errorPos + 100);
+            console.error('[GeminiService] Context around error position:');
+            console.error(`... ${jsonText.substring(start, end)} ...`);
+            console.error(`${' '.repeat(errorPos - start)}^ ERROR HERE (position ${errorPos})`);
+          }
+
           console.log('[GeminiService] Attempting fallback partial parsing...');
 
           // Fallback: try to extract complete objects from partial JSON
