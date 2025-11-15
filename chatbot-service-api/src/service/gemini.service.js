@@ -185,20 +185,20 @@ class GeminiService {
 
   /**
    * Generate quiz questions from PDF file with retry mechanism
+   * NOTE: This API is limited to 10 questions max. For larger PDFs, use startChunkedQuizGeneration()
    */
-  async generateQuizFromPDF(filePath, maxRetries = 3) {
+  async generateQuizFromPDF(filePath, maxRetries = 3, maxQuestions = 10) {
     const prompt = `Bạn là hệ thống tạo câu hỏi trắc nghiệm từ tài liệu.
 
-Nhiệm vụ:
-- Đọc file đề kiểm tra mà tôi cung cấp.
-- Tự động trích xuất TẤT CẢ các câu hỏi có trong tài liệu.
-- Với mỗi câu hỏi, hãy sinh ra output CHUẨN dưới dạng JSON theo mẫu tôi cung cấp.
+NHIỆM VỤ:
+Trích xuất CHÍNH XÁC ${maxQuestions} câu hỏi ĐẦU TIÊN từ tài liệu PDF.
 
-YÊU CẦU QUAN TRỌNG:
-1. Mỗi câu hỏi phải được trả về dưới dạng 1 object JSON.
-2. CHỈ TRẢ VỀ JSON ARRAY, KHÔNG THÊM BẤT KỲ TEXT NÀO KHÁC.
-3. Không được tự tạo thêm câu hỏi nếu tài liệu không có.
-4. Nếu tài liệu có câu hỏi tự luận → chuyển sang dạng trắc nghiệm hợp lý nhất.
+YÊU CẦU NGHIÊM NGẶT:
+1. CHỈ TRẢ VỀ ĐÚNG ${maxQuestions} CÂU HỎI, KHÔNG NHIỀU HƠN, KHÔNG ÍT HƠN.
+2. Nếu tài liệu có ít hơn ${maxQuestions} câu hỏi → trả về hết số câu hỏi có.
+3. CHỈ TRẢ VỀ JSON ARRAY, KHÔNG THÊM BẤT KỲ TEXT NÀO KHÁC.
+4. Không được tự tạo thêm câu hỏi nếu tài liệu không có.
+5. Nếu tài liệu có câu hỏi tự luận → chuyển sang dạng trắc nghiệm hợp lý nhất.
 
 FORMAT TRẢ RA (BẮT BUỘC):
 [
@@ -219,9 +219,9 @@ FORMAT TRẢ RA (BẮT BUỘC):
   }
 ]
 
-QUY TẮC:
-- "content": Nội dung câu hỏi.
-- "level": chỉ nhận giá trị {1,2,3,4} tương ứng:
+QUY TẮC CHI TIẾT:
+- "content": Nội dung câu hỏi
+- "level": chỉ nhận giá trị {1,2,3,4}:
   EASY = 1
   MEDIUM = 2
   HARD = 3
@@ -230,10 +230,11 @@ QUY TẮC:
   "1" = chỉ có 1 đáp án đúng
   "2" = có nhiều đáp án đúng
 - "answers":
-  - "content": đáp án
-  - "is_true": true/false
+  - "content": nội dung đáp án
+  - "is_true": true hoặc false
 
-CHỈ TRẢ VỀ JSON ARRAY HỢP LỆ, KHÔNG GIẢI THÍCH THÊM.`;
+CHỈ TRẢ VỀ JSON ARRAY HỢP LỆ, KHÔNG GIẢI THÍCH THÊM.
+TRẢ VỀ ĐÚNG ${maxQuestions} CÂU HỎI HOÀN CHỈNH, KHÔNG CẮT DỞ GIỮA CHỪNG.`;
 
     let lastError = null;
 
