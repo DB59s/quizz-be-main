@@ -8,7 +8,13 @@ class GeminiService {
       throw new Error('GEMINI_API_KEY is not configured in environment variables');
     }
     this.genAI = new GoogleGenerativeAI(apiKey);
-    this.model = this.genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
+    this.model = this.genAI.getGenerativeModel({
+      model: 'gemini-2.0-flash-exp',
+      generationConfig: {
+        maxOutputTokens: 8192, // Increase output token limit
+        temperature: 0.1, // Lower temperature for more consistent JSON
+      }
+    });
   }
 
   /**
@@ -89,6 +95,93 @@ class GeminiService {
   }
 
   /**
+   * Try to salvage partial JSON by extracting complete objects
+   * This is a fallback when JSON.parse fails
+   */
+  _parsePartialJson(jsonText) {
+    console.log('[GeminiService] Attempting partial JSON parsing...');
+
+    const questions = [];
+    let depth = 0;
+    let currentObject = '';
+    let inString = false;
+    let escapeNext = false;
+
+    // Skip the opening '['
+    let startIndex = jsonText.indexOf('[');
+    if (startIndex === -1) {
+      throw new Error('No array start found');
+    }
+
+    for (let i = startIndex + 1; i < jsonText.length; i++) {
+      const char = jsonText[i];
+
+      // Handle string escaping
+      if (escapeNext) {
+        currentObject += char;
+        escapeNext = false;
+        continue;
+      }
+
+      if (char === '\\') {
+        currentObject += char;
+        escapeNext = true;
+        continue;
+      }
+
+      // Track if we're inside a string
+      if (char === '"') {
+        inString = !inString;
+        currentObject += char;
+        continue;
+      }
+
+      // Only track depth when not in string
+      if (!inString) {
+        if (char === '{') {
+          if (depth === 0) {
+            currentObject = '{';
+          } else {
+            currentObject += char;
+          }
+          depth++;
+        } else if (char === '}') {
+          depth--;
+          currentObject += char;
+
+          // Complete object found
+          if (depth === 0 && currentObject.trim()) {
+            try {
+              const obj = JSON.parse(currentObject);
+              // Validate structure
+              if (obj.content && obj.level && obj.type && Array.isArray(obj.answers)) {
+                questions.push(obj);
+                console.log(`[GeminiService] Extracted question ${questions.length}`);
+              }
+            } catch (e) {
+              console.warn(`[GeminiService] Failed to parse object: ${e.message}`);
+            }
+            currentObject = '';
+          }
+        } else {
+          if (depth > 0) {
+            currentObject += char;
+          }
+        }
+      } else {
+        currentObject += char;
+      }
+    }
+
+    if (questions.length === 0) {
+      throw new Error('No valid questions extracted from partial JSON');
+    }
+
+    console.log(`[GeminiService] Partial parsing recovered ${questions.length} questions`);
+    return questions;
+  }
+
+  /**
    * Generate quiz questions from PDF file with retry mechanism
    */
   async generateQuizFromPDF(filePath, maxRetries = 3) {
@@ -158,8 +251,18 @@ CHỈ TRẢ VỀ JSON ARRAY HỢP LỆ, KHÔNG GIẢI THÍCH THÊM.`;
         console.log(`[GeminiService] Cleaned JSON length: ${jsonText.length}`);
         console.log(`[GeminiService] Cleaned JSON preview: ${jsonText.substring(0, 300)}...`);
 
-        // Parse JSON
-        const questions = JSON.parse(jsonText);
+        // Try to parse JSON
+        let questions;
+        try {
+          questions = JSON.parse(jsonText);
+          console.log('[GeminiService] Standard JSON parsing successful');
+        } catch (parseError) {
+          console.warn(`[GeminiService] Standard JSON parsing failed: ${parseError.message}`);
+          console.log('[GeminiService] Attempting fallback partial parsing...');
+
+          // Fallback: try to extract complete objects from partial JSON
+          questions = this._parsePartialJson(jsonText);
+        }
 
         // Validate structure
         if (!Array.isArray(questions)) {
@@ -171,15 +274,24 @@ CHỈ TRẢ VỀ JSON ARRAY HỢP LỆ, KHÔNG GIẢI THÍCH THÊM.`;
         }
 
         // Validate each question
+        let validQuestions = 0;
+        const finalQuestions = [];
         for (let i = 0; i < questions.length; i++) {
           const q = questions[i];
-          if (!q.content || !q.level || !q.type || !Array.isArray(q.answers)) {
-            throw new Error(`Invalid question structure at index ${i}`);
+          if (q.content && q.level && q.type && Array.isArray(q.answers) && q.answers.length > 0) {
+            finalQuestions.push(q);
+            validQuestions++;
+          } else {
+            console.warn(`[GeminiService] Skipping invalid question at index ${i}`);
           }
         }
 
-        console.log(`[GeminiService] Successfully parsed ${questions.length} questions`);
-        return questions;
+        if (finalQuestions.length === 0) {
+          throw new Error('No valid questions found after validation');
+        }
+
+        console.log(`[GeminiService] Successfully parsed ${finalQuestions.length} valid questions (${validQuestions}/${questions.length})`);
+        return finalQuestions;
 
       } catch (error) {
         lastError = error;
