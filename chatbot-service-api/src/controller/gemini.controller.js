@@ -97,8 +97,20 @@ async function generateQuiz(req, res, next) {
     filePath = file.path;
     console.log(`[Controller] Processing PDF file: ${filePath}`);
 
-    // Generate quiz with retry mechanism (default: 3 attempts)
-    const questions = await geminiService.generateQuizFromPDF(filePath);
+    // Get maxQuestions from request body (default: 10)
+    let maxQuestions = parseInt(req.body.maxQuestions) || 10;
+    console.log(`[Controller] Requesting max ${maxQuestions} questions`);
+
+    let questions;
+
+    // If requesting > 15 questions, use auto-batch method
+    if (maxQuestions > 15) {
+      console.log(`[Controller] Using auto-batch method for ${maxQuestions} questions`);
+      questions = await geminiService.generateQuizWithAutoBatch(filePath, maxQuestions, 10);
+    } else {
+      // For <= 15 questions, use standard method
+      questions = await geminiService.generateQuizFromPDF(filePath, 3, maxQuestions);
+    }
 
     // Clean up uploaded file after successful processing
     if (fs.existsSync(filePath)) {
@@ -147,7 +159,7 @@ async function startChunkedQuizGeneration(req, res, next) {
 
   try {
     const file = req.file;
-    const { questionsPerChunk = 10 } = req.body; // Default 10, max 12 to avoid large response
+    const { questionsPerChunk = 30 } = req.body; // Default 10, max 12 to avoid large response
 
     if (!file) {
       return res.status(400).json({

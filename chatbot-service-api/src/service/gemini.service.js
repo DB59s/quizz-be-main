@@ -361,6 +361,100 @@ TRẢ VỀ ĐÚNG ${maxQuestions} CÂU HỎI HOÀN CHỈNH, KHÔNG CẮT DỞ GI
   }
 
   /**
+   * Generate quiz with auto-batching for large question counts
+   * This method automatically fetches multiple batches if needed
+   * @param {string} filePath - Path to PDF file
+   * @param {number} totalQuestions - Total questions desired
+   * @param {number} batchSize - Questions per batch (default: 10)
+   * @returns {Promise<Array>} All questions
+   */
+  async generateQuizWithAutoBatch(filePath, totalQuestions, batchSize = 10) {
+    console.log(`[GeminiService] Auto-batch generation: ${totalQuestions} questions, batch size: ${batchSize}`);
+
+    const allQuestions = [];
+    const batches = Math.ceil(totalQuestions / batchSize);
+    let extractedCount = 0;
+
+    for (let batchNum = 1; batchNum <= batches && extractedCount < totalQuestions; batchNum++) {
+      console.log(`[GeminiService] Fetching batch ${batchNum}/${batches}...`);
+
+      const startQuestion = extractedCount + 1;
+      const questionsNeeded = Math.min(batchSize, totalQuestions - extractedCount);
+
+      const prompt = `Bạn là hệ thống tạo câu hỏi trắc nghiệm từ tài liệu.
+
+NHIỆM VỤ:
+Trích xuất câu hỏi từ số ${startQuestion} đến số ${startQuestion + questionsNeeded - 1} từ tài liệu PDF (tổng cộng ${questionsNeeded} câu hỏi).
+
+YÊU CẦU NGHIÊM NGẶT:
+1. BẮT ĐẦU từ câu hỏi thứ ${startQuestion} trong tài liệu.
+2. KẾT THÚC ở câu hỏi thứ ${startQuestion + questionsNeeded - 1}.
+3. TRẢ VỀ ĐÚNG ${questionsNeeded} CÂU HỎI.
+4. CHỈ TRẢ VỀ JSON ARRAY, KHÔNG THÊM TEXT KHÁC.
+
+FORMAT:
+[
+  {
+    "content": "Nội dung câu hỏi?",
+    "level": 1,
+    "type": "1",
+    "answers": [
+      {"content": "Đáp án 1", "is_true": false},
+      {"content": "Đáp án 2", "is_true": true}
+    ]
+  }
+]
+
+QUY TẮC:
+- level: {1=EASY, 2=MEDIUM, 3=HARD, 4=VERY_HARD}
+- type: {"1"=1 đáp án đúng, "2"=nhiều đáp án đúng}
+
+CHỈ TRẢ VỀ JSON HỢP LỆ, KHÔNG CẮT DỞ GIỮA CHỪNG.`;
+
+      try {
+        const response = await this.analyzeFile(filePath, prompt);
+        const jsonText = this._cleanJsonResponse(response);
+
+        let questions;
+        try {
+          questions = JSON.parse(jsonText);
+        } catch (parseError) {
+          console.warn(`[GeminiService] Batch ${batchNum} parse failed, using fallback...`);
+          questions = this._parsePartialJson(jsonText);
+        }
+
+        if (Array.isArray(questions) && questions.length > 0) {
+          allQuestions.push(...questions);
+          extractedCount += questions.length;
+          console.log(`[GeminiService] Batch ${batchNum} extracted ${questions.length} questions (total: ${extractedCount})`);
+
+          // If we got less than requested, PDF might have ended
+          if (questions.length < questionsNeeded * 0.8) {
+            console.log(`[GeminiService] Batch returned less than 80% of requested, assuming PDF end`);
+            break;
+          }
+
+          // Delay between batches
+          if (batchNum < batches) {
+            await new Promise(resolve => setTimeout(resolve, 2000));
+          }
+        } else {
+          console.warn(`[GeminiService] Batch ${batchNum} returned no questions`);
+          break;
+        }
+      } catch (error) {
+        console.error(`[GeminiService] Batch ${batchNum} failed: ${error.message}`);
+        // If first batch fails, throw. Otherwise, return what we have
+        if (batchNum === 1) throw error;
+        break;
+      }
+    }
+
+    console.log(`[GeminiService] Auto-batch completed: ${allQuestions.length} total questions`);
+    return allQuestions;
+  }
+
+  /**
    * Start chunked quiz generation from PDF
    * Returns session ID for polling
    * @param {string} filePath - Path to PDF file
