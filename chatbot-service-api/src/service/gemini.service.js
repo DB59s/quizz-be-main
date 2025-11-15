@@ -1,5 +1,7 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const fs = require('fs');
+const { v4: uuidv4 } = require('uuid');
+const sessionStore = require('../utils/sessionStore');
 
 class GeminiService {
   constructor() {
@@ -307,6 +309,233 @@ CHỈ TRẢ VỀ JSON ARRAY HỢP LỆ, KHÔNG GIẢI THÍCH THÊM.`;
     // All retries failed
     console.error('[GeminiService] All retry attempts failed');
     throw new Error(`Failed to generate quiz from PDF after ${maxRetries} attempts. Last error: ${lastError.message}`);
+  }
+
+  /**
+   * Start chunked quiz generation from PDF
+   * Returns session ID for polling
+   * @param {string} filePath - Path to PDF file
+   * @param {number} questionsPerChunk - Questions per chunk (default: 15)
+   * @returns {Promise<Object>} Session info
+   */
+  async startChunkedQuizGeneration(filePath, questionsPerChunk = 15) {
+    const sessionId = uuidv4();
+
+    console.log(`[GeminiService] Starting chunked generation, session: ${sessionId}`);
+
+    // Create session
+    const session = sessionStore.createSession(sessionId, {
+      filePath,
+      questionsPerChunk,
+      totalQuestions: [],
+      currentChunk: 0,
+      totalChunks: null, // Will be determined
+      status: 'processing',
+      error: null
+    });
+
+    // Start processing in background (don't await)
+    this._processChunkedQuiz(sessionId, filePath, questionsPerChunk).catch(error => {
+      console.error(`[GeminiService] Chunked generation failed for session ${sessionId}:`, error);
+      sessionStore.updateSession(sessionId, {
+        status: 'error',
+        error: error.message
+      });
+    });
+
+    return {
+      sessionId,
+      status: 'processing',
+      message: 'Quiz generation started. Poll /api/v1/gemini/quiz/session/:sessionId to get progress.'
+    };
+  }
+
+  /**
+   * Process quiz generation in chunks (background task)
+   * @private
+   */
+  async _processChunkedQuiz(sessionId, filePath, questionsPerChunk) {
+    try {
+      const prompt = `Bạn là hệ thống tạo câu hỏi trắc nghiệm từ tài liệu.
+
+Nhiệm vụ:
+- Đọc file đề kiểm tra mà tôi cung cấp.
+- Tự động trích xuất TẤT CẢ các câu hỏi có trong tài liệu.
+- Với mỗi câu hỏi, hãy sinh ra output CHUẨN dưới dạng JSON theo mẫu tôi cung cấp.
+
+YÊU CẦU QUAN TRỌNG:
+1. Mỗi câu hỏi phải được trả về dưới dạng 1 object JSON.
+2. CHỈ TRẢ VỀ JSON ARRAY, KHÔNG THÊM BẤT KỲ TEXT NÀO KHÁC.
+3. Không được tự tạo thêm câu hỏi nếu tài liệu không có.
+4. TỐI ĐA ${questionsPerChunk} CÂU HỎI ĐẦU TIÊN.
+
+FORMAT TRẢ RA (BẮT BUỘC):
+[
+  {
+    "content": "Nội dung câu hỏi?",
+    "level": 1,
+    "type": "1",
+    "answers": [
+      {
+        "content": "Nội dung đáp án",
+        "is_true": false
+      },
+      {
+        "content": "Nội dung đáp án",
+        "is_true": true
+      }
+    ]
+  }
+]
+
+QUY TẮC:
+- "content": Nội dung câu hỏi.
+- "level": chỉ nhận giá trị {1,2,3,4} tương ứng:
+  EASY = 1
+  MEDIUM = 2
+  HARD = 3
+  VERY_HARD = 4
+- "type":
+  "1" = chỉ có 1 đáp án đúng
+  "2" = có nhiều đáp án đúng
+- "answers":
+  - "content": đáp án
+  - "is_true": true/false
+
+CHỈ TRẢ VỀ JSON ARRAY HỢP LỆ, TỐI ĐA ${questionsPerChunk} CÂU HỎI.`;
+
+      // First attempt - get initial chunk
+      console.log(`[GeminiService] Processing chunk 1 for session ${sessionId}`);
+      const response = await this.analyzeFile(filePath, prompt);
+      const jsonText = this._cleanJsonResponse(response);
+
+      let questions;
+      try {
+        questions = JSON.parse(jsonText);
+      } catch (parseError) {
+        questions = this._parsePartialJson(jsonText);
+      }
+
+      // Filter valid questions
+      const validQuestions = questions.filter(q =>
+        q.content && q.level && q.type && Array.isArray(q.answers) && q.answers.length > 0
+      );
+
+      console.log(`[GeminiService] Chunk 1 extracted ${validQuestions.length} questions`);
+
+      // Update session with first chunk
+      sessionStore.updateSession(sessionId, {
+        totalQuestions: validQuestions,
+        currentChunk: 1,
+        status: validQuestions.length < questionsPerChunk ? 'completed' : 'processing'
+      });
+
+      // If we got full chunk, there might be more questions
+      // Generate continuation prompts
+      if (validQuestions.length >= questionsPerChunk) {
+        let chunkNumber = 2;
+        let hasMore = true;
+
+        while (hasMore && chunkNumber <= 5) { // Max 5 chunks to prevent infinite loop
+          console.log(`[GeminiService] Processing chunk ${chunkNumber} for session ${sessionId}`);
+
+          const continuationPrompt = `Tiếp tục trích xuất câu hỏi từ tài liệu.
+
+BẮT ĐẦU TỪ CÂU HỎI THỨ ${(chunkNumber - 1) * questionsPerChunk + 1}.
+Trích xuất TỐI ĐA ${questionsPerChunk} câu hỏi TIẾP THEO.
+
+Sử dụng cùng format JSON như trước:
+[{"content": "...", "level": 1, "type": "1", "answers": [...]}]
+
+CHỈ TRẢ VỀ JSON ARRAY HỢP LỆ.`;
+
+          try {
+            const chunkResponse = await this.analyzeFile(filePath, continuationPrompt);
+            const chunkJsonText = this._cleanJsonResponse(chunkResponse);
+
+            let chunkQuestions;
+            try {
+              chunkQuestions = JSON.parse(chunkJsonText);
+            } catch (e) {
+              chunkQuestions = this._parsePartialJson(chunkJsonText);
+            }
+
+            const validChunkQuestions = chunkQuestions.filter(q =>
+              q.content && q.level && q.type && Array.isArray(q.answers) && q.answers.length > 0
+            );
+
+            console.log(`[GeminiService] Chunk ${chunkNumber} extracted ${validChunkQuestions.length} questions`);
+
+            // Get current session data
+            const currentSession = sessionStore.getSession(sessionId);
+            const allQuestions = [...currentSession.totalQuestions, ...validChunkQuestions];
+
+            // Update session
+            sessionStore.updateSession(sessionId, {
+              totalQuestions: allQuestions,
+              currentChunk: chunkNumber
+            });
+
+            // Check if we should continue
+            if (validChunkQuestions.length < questionsPerChunk) {
+              hasMore = false;
+            } else {
+              chunkNumber++;
+              // Add delay between chunks to avoid rate limiting
+              await new Promise(resolve => setTimeout(resolve, 3000));
+            }
+
+          } catch (chunkError) {
+            console.error(`[GeminiService] Error processing chunk ${chunkNumber}:`, chunkError);
+            hasMore = false;
+          }
+        }
+      }
+
+      // Mark as completed
+      const finalSession = sessionStore.getSession(sessionId);
+      sessionStore.updateSession(sessionId, {
+        status: 'completed',
+        totalChunks: finalSession.currentChunk
+      });
+
+      console.log(`[GeminiService] Completed session ${sessionId} with ${finalSession.totalQuestions.length} total questions`);
+
+    } catch (error) {
+      console.error(`[GeminiService] Fatal error in chunked processing:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get chunked quiz generation status and results
+   * @param {string} sessionId - Session ID
+   * @returns {Object} Session status and questions
+   */
+  getChunkedQuizStatus(sessionId) {
+    const session = sessionStore.getSession(sessionId);
+
+    if (!session) {
+      throw new Error('Session not found or expired');
+    }
+
+    return {
+      sessionId: session.id,
+      status: session.status,
+      currentChunk: session.currentChunk,
+      totalChunks: session.totalChunks,
+      totalQuestions: session.totalQuestions.length,
+      questions: session.totalQuestions,
+      error: session.error
+    };
+  }
+
+  /**
+   * Delete session
+   * @param {string} sessionId - Session ID
+   */
+  deleteSession(sessionId) {
+    return sessionStore.deleteSession(sessionId);
   }
 }
 
