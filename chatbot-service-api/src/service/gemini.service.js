@@ -315,10 +315,12 @@ CHỈ TRẢ VỀ JSON ARRAY HỢP LỆ, KHÔNG GIẢI THÍCH THÊM.`;
    * Start chunked quiz generation from PDF
    * Returns session ID for polling
    * @param {string} filePath - Path to PDF file
-   * @param {number} questionsPerChunk - Questions per chunk (default: 15)
+   * @param {number} questionsPerChunk - Questions per chunk (default: 10, max: 12)
    * @returns {Promise<Object>} Session info
    */
-  async startChunkedQuizGeneration(filePath, questionsPerChunk = 15) {
+  async startChunkedQuizGeneration(filePath, questionsPerChunk = 10) {
+    // Limit to max 12 to avoid response too large
+    questionsPerChunk = Math.min(questionsPerChunk, 12);
     const sessionId = uuidv4();
 
     console.log(`[GeminiService] Starting chunked generation, session: ${sessionId}`);
@@ -358,16 +360,14 @@ CHỈ TRẢ VỀ JSON ARRAY HỢP LỆ, KHÔNG GIẢI THÍCH THÊM.`;
     try {
       const prompt = `Bạn là hệ thống tạo câu hỏi trắc nghiệm từ tài liệu.
 
-Nhiệm vụ:
-- Đọc file đề kiểm tra mà tôi cung cấp.
-- Tự động trích xuất TẤT CẢ các câu hỏi có trong tài liệu.
-- Với mỗi câu hỏi, hãy sinh ra output CHUẨN dưới dạng JSON theo mẫu tôi cung cấp.
+NHIỆM VỤ:
+Trích xuất CHÍNH XÁC ${questionsPerChunk} câu hỏi ĐẦU TIÊN từ tài liệu PDF.
 
-YÊU CẦU QUAN TRỌNG:
-1. Mỗi câu hỏi phải được trả về dưới dạng 1 object JSON.
-2. CHỈ TRẢ VỀ JSON ARRAY, KHÔNG THÊM BẤT KỲ TEXT NÀO KHÁC.
-3. Không được tự tạo thêm câu hỏi nếu tài liệu không có.
-4. TỐI ĐA ${questionsPerChunk} CÂU HỎI ĐẦU TIÊN.
+YÊU CẦU NGHIÊM NGẶT:
+1. CHỈ TRẢ VỀ ĐÚNG ${questionsPerChunk} CÂU HỎI, KHÔNG NHIỀU HỚN, KHÔNG ÍT HƠN.
+2. BẮT ĐẦU TỪ CÂU HỎI ĐẦU TIÊN TRONG TÀI LIỆU.
+3. CHỈ TRẢ VỀ JSON ARRAY, KHÔNG GIẢI THÍCH, KHÔNG THÊM TEXT.
+4. Nếu tài liệu có ít hơn ${questionsPerChunk} câu, chỉ trả về số câu có sẵn.
 
 FORMAT TRẢ RA (BẮT BUỘC):
 [
@@ -430,24 +430,34 @@ CHỈ TRẢ VỀ JSON ARRAY HỢP LỆ, TỐI ĐA ${questionsPerChunk} CÂU HỎ
         status: validQuestions.length < questionsPerChunk ? 'completed' : 'processing'
       });
 
-      // If we got full chunk, there might be more questions
+      // If we got full chunk (or close to it), there might be more questions
       // Generate continuation prompts
-      if (validQuestions.length >= questionsPerChunk) {
+      const isFullChunk = validQuestions.length >= Math.floor(questionsPerChunk * 0.8); // 80% threshold
+
+      if (isFullChunk) {
         let chunkNumber = 2;
         let hasMore = true;
 
-        while (hasMore && chunkNumber <= 5) { // Max 5 chunks to prevent infinite loop
+        while (hasMore && chunkNumber <= 10) { // Max 10 chunks (10*10 = 100 questions max)
           console.log(`[GeminiService] Processing chunk ${chunkNumber} for session ${sessionId}`);
 
-          const continuationPrompt = `Tiếp tục trích xuất câu hỏi từ tài liệu.
+          const startQuestion = (chunkNumber - 1) * questionsPerChunk + 1;
+          const endQuestion = chunkNumber * questionsPerChunk;
 
-BẮT ĐẦU TỪ CÂU HỎI THỨ ${(chunkNumber - 1) * questionsPerChunk + 1}.
-Trích xuất TỐI ĐA ${questionsPerChunk} câu hỏi TIẾP THEO.
+          const continuationPrompt = `Tiếp tục trích xuất câu hỏi từ tài liệu PDF.
 
-Sử dụng cùng format JSON như trước:
-[{"content": "...", "level": 1, "type": "1", "answers": [...]}]
+YÊU CẦU CỤ THỂ:
+- BẮT ĐẦU: Câu hỏi số ${startQuestion}
+- KẾT THÚC: Câu hỏi số ${endQuestion}
+- TỔNG CỘNG: ${questionsPerChunk} câu hỏi
 
-CHỈ TRẢ VỀ JSON ARRAY HỢP LỆ.`;
+QUY TẮC:
+1. BỎ QUA ${(chunkNumber - 1) * questionsPerChunk} câu hỏi đầu tiên (đã xử lý).
+2. Chỉ trích xuất ${questionsPerChunk} câu TIẾP THEO.
+3. CHỈ TRẢ VỀ JSON ARRAY, không giải thích.
+4. Nếu không còn đủ ${questionsPerChunk} câu, trả về số câu còn lại.
+
+FORMAT: [{"content": "...", "level": 1, "type": "1", "answers": [...]}]`;
 
           try {
             const chunkResponse = await this.analyzeFile(filePath, continuationPrompt);
@@ -477,10 +487,15 @@ CHỈ TRẢ VỀ JSON ARRAY HỢP LỆ.`;
             });
 
             // Check if we should continue
-            if (validChunkQuestions.length < questionsPerChunk) {
+            // Stop if we got less than 80% of expected questions
+            const isPartialChunk = validChunkQuestions.length < Math.floor(questionsPerChunk * 0.8);
+
+            if (isPartialChunk || validChunkQuestions.length === 0) {
+              console.log(`[GeminiService] Stopping: Got ${validChunkQuestions.length} questions (less than threshold)`);
               hasMore = false;
             } else {
               chunkNumber++;
+              console.log(`[GeminiService] Continuing to chunk ${chunkNumber}...`);
               // Add delay between chunks to avoid rate limiting
               await new Promise(resolve => setTimeout(resolve, 3000));
             }

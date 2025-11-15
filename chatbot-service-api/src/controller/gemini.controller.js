@@ -147,7 +147,7 @@ async function startChunkedQuizGeneration(req, res, next) {
 
   try {
     const file = req.file;
-    const { questionsPerChunk = 15 } = req.body;
+    const { questionsPerChunk = 10 } = req.body; // Default 10, max 12 to avoid large response
 
     if (!file) {
       return res.status(400).json({
