@@ -55,9 +55,43 @@ class GeminiService {
   }
 
   /**
-   * Generate quiz questions from PDF file
+   * Clean and extract JSON from Gemini response
    */
-  async generateQuizFromPDF(filePath) {
+  _cleanJsonResponse(responseText) {
+    let cleaned = responseText.trim();
+
+    // Remove markdown code blocks
+    cleaned = cleaned.replace(/```json\s*/g, '').replace(/```\s*/g, '');
+
+    // Remove any leading/trailing text that's not JSON
+    // Find the first '[' or '{' and last ']' or '}'
+    const firstBracket = Math.max(cleaned.indexOf('['), cleaned.indexOf('{'));
+    const lastOpenBracket = cleaned.lastIndexOf('[');
+    const lastCloseBracket = cleaned.lastIndexOf(']');
+    const lastOpenBrace = cleaned.lastIndexOf('{');
+    const lastCloseBrace = cleaned.lastIndexOf('}');
+
+    if (firstBracket === -1) {
+      throw new Error('No JSON structure found in response');
+    }
+
+    // Determine if it's an array or object
+    const isArray = cleaned.charAt(firstBracket) === '[';
+    const lastBracket = isArray ? lastCloseBracket : lastCloseBrace;
+
+    if (lastBracket === -1) {
+      throw new Error('Incomplete JSON structure in response');
+    }
+
+    cleaned = cleaned.substring(firstBracket, lastBracket + 1);
+
+    return cleaned;
+  }
+
+  /**
+   * Generate quiz questions from PDF file with retry mechanism
+   */
+  async generateQuizFromPDF(filePath, maxRetries = 3) {
     const prompt = `Bạn là hệ thống tạo câu hỏi trắc nghiệm từ tài liệu.
 
 Nhiệm vụ:
@@ -67,11 +101,11 @@ Nhiệm vụ:
 
 YÊU CẦU QUAN TRỌNG:
 1. Mỗi câu hỏi phải được trả về dưới dạng 1 object JSON.
-2. Tuyệt đối không trả lời ngoài JSON.
+2. CHỈ TRẢ VỀ JSON ARRAY, KHÔNG THÊM BẤT KỲ TEXT NÀO KHÁC.
 3. Không được tự tạo thêm câu hỏi nếu tài liệu không có.
 4. Nếu tài liệu có câu hỏi tự luận → chuyển sang dạng trắc nghiệm hợp lý nhất.
 
-FORMAT TRẢ RA (YÊU CẦU BẮT BUỘC):
+FORMAT TRẢ RA (BẮT BUỘC):
 [
   {
     "content": "Nội dung câu hỏi?",
@@ -97,33 +131,70 @@ QUY TẮC:
   MEDIUM = 2
   HARD = 3
   VERY_HARD = 4
-- "type": 
+- "type":
   "1" = chỉ có 1 đáp án đúng
   "2" = có nhiều đáp án đúng
 - "answers":
   - "content": đáp án
   - "is_true": true/false
 
-Chỉ trả về JSON array, không thêm bất kỳ text nào khác.`;
+CHỈ TRẢ VỀ JSON ARRAY HỢP LỆ, KHÔNG GIẢI THÍCH THÊM.`;
 
-    try {
-      const response = await this.analyzeFile(filePath, prompt);
-      
-      // Try to parse JSON response
-      // Remove markdown code blocks if present
-      let jsonText = response.trim();
-      if (jsonText.startsWith('```json')) {
-        jsonText = jsonText.replace(/```json\n?/g, '').replace(/```\n?/g, '');
-      } else if (jsonText.startsWith('```')) {
-        jsonText = jsonText.replace(/```\n?/g, '');
+    let lastError = null;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`[GeminiService] Generating quiz from PDF - Attempt ${attempt}/${maxRetries}`);
+
+        const response = await this.analyzeFile(filePath, prompt);
+
+        console.log(`[GeminiService] Raw response length: ${response.length}`);
+        console.log(`[GeminiService] First 200 chars: ${response.substring(0, 200)}`);
+        console.log(`[GeminiService] Last 200 chars: ${response.substring(Math.max(0, response.length - 200))}`);
+
+        // Clean and extract JSON
+        const jsonText = this._cleanJsonResponse(response);
+
+        console.log(`[GeminiService] Cleaned JSON length: ${jsonText.length}`);
+        console.log(`[GeminiService] Cleaned JSON preview: ${jsonText.substring(0, 300)}...`);
+
+        // Parse JSON
+        const questions = JSON.parse(jsonText);
+
+        // Validate structure
+        if (!Array.isArray(questions)) {
+          throw new Error('Response is not a JSON array');
+        }
+
+        if (questions.length === 0) {
+          throw new Error('No questions found in response');
+        }
+
+        // Validate each question
+        for (let i = 0; i < questions.length; i++) {
+          const q = questions[i];
+          if (!q.content || !q.level || !q.type || !Array.isArray(q.answers)) {
+            throw new Error(`Invalid question structure at index ${i}`);
+          }
+        }
+
+        console.log(`[GeminiService] Successfully parsed ${questions.length} questions`);
+        return questions;
+
+      } catch (error) {
+        lastError = error;
+        console.error(`[GeminiService] Attempt ${attempt} failed:`, error.message);
+
+        if (attempt < maxRetries) {
+          console.log(`[GeminiService] Retrying in 2 seconds...`);
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        }
       }
-      
-      const questions = JSON.parse(jsonText);
-      return questions;
-    } catch (error) {
-      console.error('Error generating quiz from PDF:', error);
-      throw new Error('Failed to generate quiz from PDF. Response may not be valid JSON.');
     }
+
+    // All retries failed
+    console.error('[GeminiService] All retry attempts failed');
+    throw new Error(`Failed to generate quiz from PDF after ${maxRetries} attempts. Last error: ${lastError.message}`);
   }
 }
 

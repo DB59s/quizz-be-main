@@ -81,6 +81,8 @@ async function analyzeFile(req, res, next) {
  * Generate quiz questions from PDF file
  */
 async function generateQuiz(req, res, next) {
+  let filePath = null;
+
   try {
     const file = req.file;
 
@@ -92,12 +94,19 @@ async function generateQuiz(req, res, next) {
       });
     }
 
-    const questions = await geminiService.generateQuizFromPDF(file.path);
+    filePath = file.path;
+    console.log(`[Controller] Processing PDF file: ${filePath}`);
 
-    // Clean up uploaded file
-    if (fs.existsSync(file.path)) {
-      fs.unlinkSync(file.path);
+    // Generate quiz with retry mechanism (default: 3 attempts)
+    const questions = await geminiService.generateQuizFromPDF(filePath);
+
+    // Clean up uploaded file after successful processing
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+      console.log(`[Controller] Cleaned up file: ${filePath}`);
     }
+
+    console.log(`[Controller] Successfully generated ${questions.length} questions`);
 
     res.status(200).json({
       success: true,
@@ -108,11 +117,24 @@ async function generateQuiz(req, res, next) {
       }
     });
   } catch (error) {
+    console.error('[Controller] Error generating quiz:', error);
+
     // Clean up uploaded file on error
-    if (req.file && fs.existsSync(req.file.path)) {
-      fs.unlinkSync(req.file.path);
+    if (filePath && fs.existsSync(filePath)) {
+      try {
+        fs.unlinkSync(filePath);
+        console.log(`[Controller] Cleaned up file after error: ${filePath}`);
+      } catch (cleanupError) {
+        console.error('[Controller] Failed to cleanup file:', cleanupError);
+      }
     }
-    next(error);
+
+    // Return user-friendly error message
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to generate quiz from PDF. Please ensure the PDF contains valid quiz questions and try again.',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 }
 
