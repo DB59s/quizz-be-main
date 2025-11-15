@@ -220,69 +220,130 @@ class GeminiService {
   }
 
   /**
-   * Generate quiz questions from PDF file with retry mechanism
-   * NOTE: This API can handle up to 40 questions. For larger PDFs, use startChunkedQuizGeneration()
+   * Generate ALL quiz questions from PDF file automatically
+   * This method will auto-batch and fetch all questions in the PDF
+   * User only needs to call once, backend handles multiple requests automatically
    */
-  async generateQuizFromPDF(filePath, maxRetries = 3, maxQuestions = 40) {
-    const prompt = `Bạn là hệ thống tạo câu hỏi trắc nghiệm từ tài liệu.
+  async generateQuizFromPDF(filePath, maxRetries = 3, questionsPerBatch = 30) {
+    console.log(`[GeminiService] Starting auto-batch PDF quiz generation (${questionsPerBatch} questions/batch)`);
+
+    const allQuestions = [];
+    let batchNumber = 1;
+    let hasMore = true;
+    const maxBatches = 10; // Max 10 batches = 300 questions max
+
+    while (hasMore && batchNumber <= maxBatches) {
+      console.log(`[GeminiService] Fetching batch ${batchNumber}...`);
+
+      try {
+        const batchQuestions = await this._fetchQuestionBatch(
+          filePath,
+          batchNumber,
+          questionsPerBatch,
+          allQuestions.length,
+          maxRetries
+        );
+
+        if (batchQuestions.length === 0) {
+          console.log(`[GeminiService] Batch ${batchNumber} returned 0 questions - PDF exhausted`);
+          hasMore = false;
+          break;
+        }
+
+        allQuestions.push(...batchQuestions);
+        console.log(`[GeminiService] Batch ${batchNumber} extracted ${batchQuestions.length} questions (total: ${allQuestions.length})`);
+
+        // Check if we got less than 70% of requested → probably end of PDF
+        if (batchQuestions.length < questionsPerBatch * 0.7) {
+          console.log(`[GeminiService] Batch returned <70% of requested (${batchQuestions.length}/${questionsPerBatch}) - assuming PDF end`);
+          hasMore = false;
+          break;
+        }
+
+        batchNumber++;
+
+        // Delay between batches to avoid rate limiting
+        if (hasMore && batchNumber <= maxBatches) {
+          console.log(`[GeminiService] Waiting 3 seconds before next batch...`);
+          await new Promise(resolve => setTimeout(resolve, 3000));
+        }
+
+      } catch (error) {
+        console.error(`[GeminiService] Batch ${batchNumber} failed:`, error.message);
+
+        // If first batch fails, throw error
+        if (batchNumber === 1) {
+          throw error;
+        }
+
+        // Otherwise, return what we have
+        console.log(`[GeminiService] Returning ${allQuestions.length} questions collected so far`);
+        hasMore = false;
+      }
+    }
+
+    if (allQuestions.length === 0) {
+      throw new Error('No questions could be extracted from PDF');
+    }
+
+    console.log(`[GeminiService] ✅ Auto-batch completed: ${allQuestions.length} total questions from ${batchNumber - 1} batches`);
+    return allQuestions;
+  }
+
+  /**
+   * Internal method to fetch a single batch of questions
+   * @private
+   */
+  async _fetchQuestionBatch(filePath, batchNumber, questionsPerBatch, totalExtracted, maxRetries = 3) {
+    const startQuestion = totalExtracted + 1;
+    const endQuestion = totalExtracted + questionsPerBatch;
+
+    let prompt;
+    if (batchNumber === 1) {
+      // First batch - get questions from beginning
+      prompt = `Bạn là hệ thống tạo câu hỏi trắc nghiệm từ tài liệu.
 
 NHIỆM VỤ:
-Trích xuất TỐI ĐA ${maxQuestions} câu hỏi ĐẦU TIÊN từ tài liệu PDF.
+Trích xuất ${questionsPerBatch} câu hỏi ĐẦU TIÊN từ tài liệu PDF (câu 1 đến câu ${questionsPerBatch}).
 
-YÊU CẦU NGHIÊM NGẶT:
-1. TRẢ VỀ TỐI ĐA ${maxQuestions} CÂU HỎI (có thể ít hơn nếu tài liệu không đủ).
-2. MỖI CÂU HỎI PHẢI HOÀN CHỈNH 100% - KHÔNG CẮT DỞ GIỮA CHỪNG.
-3. Nếu câu hỏi thứ ${maxQuestions} chưa hoàn chỉnh → BỎ QUA, chỉ trả về ${maxQuestions - 1} câu.
-4. CHỈ TRẢ VỀ JSON ARRAY, KHÔNG THÊM BẤT KỲ TEXT NÀO KHÁC.
-5. Không được tự tạo thêm câu hỏi nếu tài liệu không có.
-6. Nếu tài liệu có câu hỏi tự luận → chuyển sang dạng trắc nghiệm hợp lý nhất.
+YÊU CẦU:
+1. TRẢ VỀ TỐI ĐA ${questionsPerBatch} CÂU HỎI HOÀN CHỈNH.
+2. Nếu tài liệu có ít hơn ${questionsPerBatch} câu → trả về hết số câu có.
+3. CHỈ TRẢ VỀ JSON ARRAY, KHÔNG THÊM TEXT KHÁC.
+4. Nếu nội dung có dấu " → thay bằng dấu '.
 
-QUAN TRỌNG - XỬ LÝ KÝ TỰ ĐẶC BIỆT:
-- Nếu nội dung có dấu ngoặc kép (") → KHÔNG DÙNG dấu ngoặc kép, thay bằng dấu nháy đơn (') hoặc bỏ đi.
-- Ví dụ: "Khẳng định "Song thị" đúng hay sai?" → "Khẳng định 'Song thị' đúng hay sai?"
-- Nếu có ký tự đặc biệt khác (\\, /, \n) → escape hoặc thay thế phù hợp.
+FORMAT: [{"content": "...", "level": 1, "type": "1", "answers": [{"content": "...", "is_true": true/false}]}]
 
-FORMAT TRẢ RA (BẮT BUỘC):
-[
-  {
-    "content": "Nội dung câu hỏi?",
-    "level": 1,
-    "type": "1",
-    "answers": [
-      {
-        "content": "Nội dung đáp án",
-        "is_true": false
-      },
-      {
-        "content": "Nội dung đáp án",
-        "is_true": true
-      }
-    ]
-  }
-]
+QUY TẮC:
+- level: {1=EASY, 2=MEDIUM, 3=HARD, 4=VERY_HARD}
+- type: {"1"=1 đáp án đúng, "2"=nhiều đáp án đúng}
 
-QUY TẮC CHI TIẾT:
-- "content": Nội dung câu hỏi (thay dấu " bằng ' nếu cần)
-- "level": chỉ nhận giá trị {1,2,3,4}:
-  EASY = 1
-  MEDIUM = 2
-  HARD = 3
-  VERY_HARD = 4
-- "type":
-  "1" = chỉ có 1 đáp án đúng
-  "2" = có nhiều đáp án đúng
-- "answers":
-  - "content": nội dung đáp án (thay dấu " bằng ' nếu cần)
-  - "is_true": true hoặc false
+CHỈ TRẢ VỀ JSON HOÀN CHỈNH, KHÔNG CẮT DỞ.`;
+    } else {
+      // Continuation batch
+      prompt = `Tiếp tục trích xuất câu hỏi từ tài liệu PDF.
 
-CHỈ TRẢ VỀ JSON ARRAY HỢP LỆ, KHÔNG GIẢI THÍCH THÊM.
-ƯU TIÊN CHẤT LƯỢNG HƠN SỐ LƯỢNG - CHỈ TRẢ VỀ CÂU HỎI HOÀN CHỈNH.`;
+NHIỆM VỤ:
+Trích xuất ${questionsPerBatch} câu hỏi TIẾP THEO từ tài liệu (câu ${startQuestion} đến câu ${endQuestion}).
+
+YÊU CẦU:
+1. BỎ QUA ${totalExtracted} câu hỏi đầu tiên (đã xử lý).
+2. TRẢ VỀ TỐI ĐA ${questionsPerBatch} CÂU HỎI TIẾP THEO.
+3. Nếu không còn đủ câu → trả về số câu còn lại.
+4. Nếu hết câu hỏi → trả về mảng rỗng [].
+5. CHỈ TRẢ VỀ JSON ARRAY, không thêm text.
+6. Nếu nội dung có dấu " → thay bằng dấu '.
+
+FORMAT: [{"content": "...", "level": 1, "type": "1", "answers": [...]}]
+
+CHỈ TRẢ VỀ JSON HOÀN CHỈNH, KHÔNG CẮT DỞ.`;
+    }
 
     let lastError = null;
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        console.log(`[GeminiService] Generating quiz from PDF - Attempt ${attempt}/${maxRetries}`);
+        console.log(`[GeminiService] Batch ${batchNumber} - Attempt ${attempt}/${maxRetries}`);
 
         const response = await this.analyzeFile(filePath, prompt);
 
@@ -323,31 +384,32 @@ CHỈ TRẢ VỀ JSON ARRAY HỢP LỆ, KHÔNG GIẢI THÍCH THÊM.
 
         // Validate structure
         if (!Array.isArray(questions)) {
-          throw new Error('Response is not a JSON array');
-        }
-
-        if (questions.length === 0) {
-          throw new Error('No questions found in response');
+          questions = []; // Treat non-array as empty
         }
 
         // Validate each question
-        let validQuestions = 0;
         const finalQuestions = [];
         for (let i = 0; i < questions.length; i++) {
           const q = questions[i];
           if (q.content && q.level && q.type && Array.isArray(q.answers) && q.answers.length > 0) {
             finalQuestions.push(q);
-            validQuestions++;
           } else {
             console.warn(`[GeminiService] Skipping invalid question at index ${i}`);
           }
         }
 
-        if (finalQuestions.length === 0) {
-          throw new Error('No valid questions found after validation');
+        // If no questions found on continuation batch, it's likely end of PDF
+        if (finalQuestions.length === 0 && batchNumber > 1) {
+          console.log(`[GeminiService] Batch ${batchNumber} returned 0 valid questions - likely end of PDF`);
+          return [];
         }
 
-        console.log(`[GeminiService] Successfully parsed ${finalQuestions.length} valid questions (${validQuestions}/${questions.length})`);
+        // If first batch has no questions, that's an error
+        if (finalQuestions.length === 0 && batchNumber === 1) {
+          throw new Error('No valid questions found in first batch');
+        }
+
+        console.log(`[GeminiService] Batch ${batchNumber} extracted ${finalQuestions.length} valid questions`);
         return finalQuestions;
 
       } catch (error) {
@@ -362,103 +424,17 @@ CHỈ TRẢ VỀ JSON ARRAY HỢP LỆ, KHÔNG GIẢI THÍCH THÊM.
     }
 
     // All retries failed
-    console.error('[GeminiService] All retry attempts failed');
-    throw new Error(`Failed to generate quiz from PDF after ${maxRetries} attempts. Last error: ${lastError.message}`);
-  }
-
-  /**
-   * Generate quiz with auto-batching for large question counts
-   * This method automatically fetches multiple batches if needed
-   * @param {string} filePath - Path to PDF file
-   * @param {number} totalQuestions - Total questions desired
-   * @param {number} batchSize - Questions per batch (default: 40)
-   * @returns {Promise<Array>} All questions
-   */
-  async generateQuizWithAutoBatch(filePath, totalQuestions, batchSize = 40) {
-    console.log(`[GeminiService] Auto-batch generation: ${totalQuestions} questions, batch size: ${batchSize}`);
-
-    const allQuestions = [];
-    const batches = Math.ceil(totalQuestions / batchSize);
-    let extractedCount = 0;
-
-    for (let batchNum = 1; batchNum <= batches && extractedCount < totalQuestions; batchNum++) {
-      console.log(`[GeminiService] Fetching batch ${batchNum}/${batches}...`);
-
-      const startQuestion = extractedCount + 1;
-      const questionsNeeded = Math.min(batchSize, totalQuestions - extractedCount);
-
-      const prompt = `Bạn là hệ thống tạo câu hỏi trắc nghiệm từ tài liệu.
-
-NHIỆM VỤ:
-Trích xuất câu hỏi từ số ${startQuestion} đến số ${startQuestion + questionsNeeded - 1} từ tài liệu PDF (tổng cộng ${questionsNeeded} câu hỏi).
-
-YÊU CẦU NGHIÊM NGẶT:
-1. BẮT ĐẦU từ câu hỏi thứ ${startQuestion} trong tài liệu.
-2. KẾT THÚC ở câu hỏi thứ ${startQuestion + questionsNeeded - 1}.
-3. TRẢ VỀ ĐÚNG ${questionsNeeded} CÂU HỎI.
-4. CHỈ TRẢ VỀ JSON ARRAY, KHÔNG THÊM TEXT KHÁC.
-
-FORMAT:
-[
-  {
-    "content": "Nội dung câu hỏi?",
-    "level": 1,
-    "type": "1",
-    "answers": [
-      {"content": "Đáp án 1", "is_true": false},
-      {"content": "Đáp án 2", "is_true": true}
-    ]
-  }
-]
-
-QUY TẮC:
-- level: {1=EASY, 2=MEDIUM, 3=HARD, 4=VERY_HARD}
-- type: {"1"=1 đáp án đúng, "2"=nhiều đáp án đúng}
-
-CHỈ TRẢ VỀ JSON HỢP LỆ, KHÔNG CẮT DỞ GIỮA CHỪNG.`;
-
-      try {
-        const response = await this.analyzeFile(filePath, prompt);
-        const jsonText = this._cleanJsonResponse(response);
-
-        let questions;
-        try {
-          questions = JSON.parse(jsonText);
-        } catch (parseError) {
-          console.warn(`[GeminiService] Batch ${batchNum} parse failed, using fallback...`);
-          questions = this._parsePartialJson(jsonText);
-        }
-
-        if (Array.isArray(questions) && questions.length > 0) {
-          allQuestions.push(...questions);
-          extractedCount += questions.length;
-          console.log(`[GeminiService] Batch ${batchNum} extracted ${questions.length} questions (total: ${extractedCount})`);
-
-          // If we got less than requested, PDF might have ended
-          if (questions.length < questionsNeeded * 0.8) {
-            console.log(`[GeminiService] Batch returned less than 80% of requested, assuming PDF end`);
-            break;
-          }
-
-          // Delay between batches
-          if (batchNum < batches) {
-            await new Promise(resolve => setTimeout(resolve, 2000));
-          }
-        } else {
-          console.warn(`[GeminiService] Batch ${batchNum} returned no questions`);
-          break;
-        }
-      } catch (error) {
-        console.error(`[GeminiService] Batch ${batchNum} failed: ${error.message}`);
-        // If first batch fails, throw. Otherwise, return what we have
-        if (batchNum === 1) throw error;
-        break;
-      }
+    // For continuation batches, return empty array instead of throwing
+    if (batchNumber > 1) {
+      console.log(`[GeminiService] Batch ${batchNumber} failed after ${maxRetries} attempts - assuming end of PDF`);
+      return [];
     }
 
-    console.log(`[GeminiService] Auto-batch completed: ${allQuestions.length} total questions`);
-    return allQuestions;
+    // For first batch, throw error
+    console.error(`[GeminiService] Batch ${batchNumber} failed after ${maxRetries} attempts`);
+    throw new Error(`Failed to extract questions from PDF after ${maxRetries} attempts. Last error: ${lastError.message}`);
   }
+
 
   /**
    * Start chunked quiz generation from PDF
