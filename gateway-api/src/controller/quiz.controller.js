@@ -499,6 +499,147 @@ async function getQuizForStudent(req, res) {
   }
 }
 
+/**
+ * Create quiz from AI-generated questions (Teacher only)
+ * POST /api/v1/quizzes/from-ai
+ */
+async function createQuizFromAI(req, res) {
+  try {
+    const { name_quiz, des_quiz, total_time, subject_id_question, questions } = req.body;
+
+    // Get teacher_id from token
+    const teacher_id = req.user?.teacher_id;
+
+    if (!teacher_id) {
+      return res.status(403).json({
+        success: false,
+        error: 'Forbidden',
+        message: 'Only teachers can create quizzes'
+      });
+    }
+
+    // Validate required fields
+    if (!name_quiz || name_quiz.trim() === '') {
+      return res.status(400).json({
+        success: false,
+        error: 'Validation failed',
+        message: 'name_quiz is required'
+      });
+    }
+
+    if (!subject_id_question || subject_id_question.trim() === '') {
+      return res.status(400).json({
+        success: false,
+        error: 'Validation failed',
+        message: 'subject_id_question is required'
+      });
+    }
+
+    if (!questions || !Array.isArray(questions) || questions.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Validation failed',
+        message: 'questions array is required and must not be empty'
+      });
+    }
+
+    console.log(`[Gateway] Creating quiz from AI for teacher ${teacher_id}`);
+    console.log(`[Gateway] - Quiz name: ${name_quiz}`);
+    console.log(`[Gateway] - Subject ID: ${subject_id_question}`);
+    console.log(`[Gateway] - Total questions: ${questions.length}`);
+
+    // Step 1: Bulk create questions in Question Service
+    console.log('[Gateway] Step 1: Creating questions in Question Service...');
+    const { QUESTION_SERVICE_BASEURL, QUESTION_SERVICE_API_TOKEN } = require('../config/env');
+    const callQuestionService = createServiceCaller(
+      'Question Service',
+      QUESTION_SERVICE_BASEURL,
+      QUESTION_SERVICE_API_TOKEN
+    );
+
+    const questionResponse = await callQuestionService(
+      'POST',
+      '/questions/bulk',
+      {
+        subject_id: subject_id_question,
+        questions: questions
+      },
+      {
+        headers: {
+          'X-Teacher-ID': teacher_id
+        }
+      }
+    );
+
+    if (!questionResponse.data?.success) {
+      console.error('[Gateway] Failed to create questions:', questionResponse.data);
+      return res.status(500).json({
+        success: false,
+        error: 'Question creation failed',
+        message: questionResponse.data?.message || 'Failed to create questions'
+      });
+    }
+
+    const question_ids = questionResponse.data.data.question_ids;
+    console.log(`[Gateway] ✓ Created ${question_ids.length} questions`);
+
+    // Step 2: Create quiz in Quiz Service with question IDs
+    console.log('[Gateway] Step 2: Creating quiz in Quiz Service...');
+    const quizResponse = await callQuizService(
+      'POST',
+      '/quizzes',
+      {
+        name: name_quiz,
+        description: des_quiz || '',
+        question_ids: question_ids,
+        total_time: total_time || null
+      },
+      {
+        headers: {
+          'x-teacher-id': teacher_id
+        }
+      }
+    );
+
+    if (!quizResponse.data?.success) {
+      console.error('[Gateway] Failed to create quiz:', quizResponse.data);
+      return res.status(500).json({
+        success: false,
+        error: 'Quiz creation failed',
+        message: quizResponse.data?.message || 'Failed to create quiz'
+      });
+    }
+
+    console.log('[Gateway] ✓ Quiz created successfully:', quizResponse.data.data.id);
+
+    return res.status(201).json({
+      success: true,
+      message: 'Quiz created successfully from AI-generated questions',
+      data: {
+        quiz: quizResponse.data.data,
+        questions_created: question_ids.length
+      }
+    });
+
+  } catch (error) {
+    console.error('[Gateway] Error creating quiz from AI:', error);
+
+    if (error.response) {
+      return res.status(error.response.status || 500).json({
+        success: false,
+        error: 'Service error',
+        message: error.response.data?.message || error.message
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      message: error.message
+    });
+  }
+}
+
 module.exports = {
   createQuiz,
   getQuizzes,
@@ -506,5 +647,6 @@ module.exports = {
   updateQuiz,
   deleteQuiz,
   getQuizForStudent,
+  createQuizFromAI,
   callQuizService
 };

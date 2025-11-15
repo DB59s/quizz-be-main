@@ -7,7 +7,8 @@ const {
   getQuizById, 
   updateQuiz, 
   deleteQuiz,
-  getQuizForStudent
+  getQuizForStudent,
+  createQuizFromAI
 } = require('../controller/quiz.controller');
 
 const router = express.Router();
@@ -100,6 +101,120 @@ const router = express.Router();
  *         description: Internal server error
  */
 router.post('/', verifyToken, requireRoleOnly(['teacher']), createQuiz);
+
+/**
+ * @swagger
+ * /api/v1/quizzes/from-ai:
+ *   post:
+ *     summary: Create quiz from AI-generated questions (Teacher only)
+ *     tags: [Quizzes]
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name_quiz
+ *               - subject_id_question
+ *               - questions
+ *             properties:
+ *               name_quiz:
+ *                 type: string
+ *                 description: Quiz name
+ *                 example: "Kiểm tra Địa lý Việt Nam"
+ *               des_quiz:
+ *                 type: string
+ *                 description: Quiz description
+ *                 example: "Bài kiểm tra về địa lý Việt Nam"
+ *               total_time:
+ *                 type: integer
+ *                 description: Total time in minutes (optional)
+ *                 example: 30
+ *               subject_id_question:
+ *                 type: string
+ *                 description: Subject ID for all questions
+ *                 example: "uuid-subject-id"
+ *               questions:
+ *                 type: array
+ *                 description: Array of AI-generated questions
+ *                 items:
+ *                   type: object
+ *                   required:
+ *                     - content
+ *                     - level
+ *                     - type
+ *                     - answers
+ *                   properties:
+ *                     content:
+ *                       type: string
+ *                       example: "Việt Nam thuộc khu vực nào trên thế giới?"
+ *                     level:
+ *                       type: integer
+ *                       enum: [1, 2, 3, 4]
+ *                       description: "1=EASY, 2=MEDIUM, 3=HARD, 4=VERY_HARD"
+ *                       example: 1
+ *                     type:
+ *                       type: string
+ *                       enum: ["1", "2"]
+ *                       description: "1=single answer, 2=multiple answers"
+ *                       example: "1"
+ *                     answers:
+ *                       type: array
+ *                       minItems: 2
+ *                       items:
+ *                         type: object
+ *                         required:
+ *                           - content
+ *                           - is_true
+ *                         properties:
+ *                           content:
+ *                             type: string
+ *                             example: "Đông Nam Á"
+ *                           is_true:
+ *                             type: boolean
+ *                             example: true
+ *     responses:
+ *       201:
+ *         description: Quiz created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Quiz created successfully from AI-generated questions
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     quiz:
+ *                       type: object
+ *                       properties:
+ *                         id:
+ *                           type: string
+ *                         name:
+ *                           type: string
+ *                         description:
+ *                           type: string
+ *                         total_time:
+ *                           type: integer
+ *                     questions_created:
+ *                       type: integer
+ *                       example: 10
+ *       400:
+ *         description: Bad request - validation failed
+ *       403:
+ *         description: Forbidden - only teachers can create quizzes
+ *       500:
+ *         description: Internal server error
+ */
+router.post('/from-ai', verifyToken, requireRoleOnly(['teacher']), createQuizFromAI);
 
 /**
  * @swagger

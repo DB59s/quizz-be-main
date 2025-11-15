@@ -477,7 +477,7 @@ services:
       DB_PORT: 3306
       DB_USERNAME: gateway_user
       DB_PASSWORD: gateway_password
-      DB_DATABASE: gateway_db
+      DB_DATABASE: gateway_user
       DB_SYNCHRONIZE: "false"
       DB_LOGGING: "false"
       # API Gateway configuration

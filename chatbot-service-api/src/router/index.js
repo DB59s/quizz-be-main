@@ -1,10 +1,12 @@
 const express = require('express');
 const conversationRouter = require('./conversation.router');
+const geminiRouter = require('./gemini.router');
 
 const router = express.Router();
 
 // Mount v1 API routes
 router.use('/v1/conversations', conversationRouter);
+router.use('/v1/gemini', geminiRouter);
 
 /**
  * @swagger
@@ -72,6 +74,7 @@ router.get('/', (req, res) => {
     endpoints: {
       health: '/api/health',
       conversations: '/api/v1/conversations',
+      gemini: '/api/v1/gemini',
       socket: 'ws://localhost:9012 (Socket.IO)'
     }
   });
