@@ -46,6 +46,8 @@ class GeminiController {
       });
 
       // Call chatbot service
+      // Timeout phải đủ lớn cho việc xử lý nhiều chunks
+      // Ví dụ: 97 câu = 3 chunks, mỗi chunk 15s delay = ~60s + processing time
       const response = await axios.post(
         `${CHATBOT_SERVICE_BASEURL}/gemini/generate-quiz`,
         formData,
@@ -55,7 +57,7 @@ class GeminiController {
           },
           maxContentLength: Infinity,
           maxBodyLength: Infinity,
-          timeout: 120000 // 2 minutes timeout for AI processing
+          timeout: 300000 // 5 phút timeout để đủ cho xử lý nhiều chunks
         }
       );
 
