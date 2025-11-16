@@ -101,9 +101,14 @@ QUY TẮC:
   "1" = chỉ có 1 đáp án đúng
   "2" = có nhiều đáp án đúng
 - "answers":
-  - "content": đáp án
+  - "content": "content": nội dung đáp án (KHÔNG CHỨA DẤU ")
   - "is_true": true/false
-
+QUY ĐỊNH VỀ JSON:
+Không được trả về bất kỳ nội dung nào ngoài JSON array.
+JSON phải hợp lệ tuyệt đối.
+Không được escape ký tự.
+Không được tạo thêm câu hỏi không có trong tài liệu.
+Câu hỏi tự luận phải chuyển thành trắc nghiệm hợp lý.
 Chỉ trả về JSON array, không thêm bất kỳ text nào khác.`;
 
     try {
