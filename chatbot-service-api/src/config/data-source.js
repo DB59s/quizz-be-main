@@ -4,6 +4,7 @@ const config = require('./env');
 // Import entities
 const Conversation = require('../entity/Conversation');
 const ChatMessage = require('../entity/ChatMessage');
+const QuizJob = require('../entity/QuizJob');
 
 // Create DataSource configuration
 const AppDataSource = new DataSource({
@@ -15,7 +16,7 @@ const AppDataSource = new DataSource({
   database: config.DB_DATABASE,
   synchronize: config.DB_SYNCHRONIZE, // Enable for development, disable for production
   logging: config.DB_LOGGING,
-  entities: [Conversation, ChatMessage], // Add all entities here
+  entities: [Conversation, ChatMessage, QuizJob], // Add all entities here
   migrations: [],
   subscribers: [],
 });

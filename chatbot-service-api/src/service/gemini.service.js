@@ -185,23 +185,41 @@ Chỉ trả về JSON array, không thêm bất kỳ text nào khác.`;
 
   /**
    * Generate quiz questions from PDF file (auto-chunking for large files)
+   * @param {string} filePath - Path to PDF file
+   * @param {Function} progressCallback - Optional callback for progress updates (chunk, totalChunks, processedQuestions, totalQuestions, message)
    */
-  async generateQuizFromPDF(filePath) {
+  async generateQuizFromPDF(filePath, progressCallback = null) {
     const QUESTIONS_PER_CHUNK = 40; // Số câu hỏi mỗi lần gọi API
-    const DELAY_BETWEEN_REQUESTS = 15000; // 15 giây delay giữa mỗi request (4 req/minute max)
+    const DELAY_BETWEEN_REQUESTS = 5000; // 5 giây delay giữa mỗi request (12 req/minute, safe for Gemini)
 
     try {
       console.log('Step 1: Counting total questions in PDF...');
+
+      if (progressCallback) {
+        await progressCallback(0, 0, 0, 0, 'Counting total questions in PDF...');
+      }
+
       const totalQuestions = await this.getTotalQuestionsInPDF(filePath);
       console.log(`Total questions found: ${totalQuestions}`);
 
-      // Delay sau khi count để tránh rate limit
-      await this.sleep(DELAY_BETWEEN_REQUESTS);
+      // Delay sau khi count để tránh rate limit (ngắn hơn vì chỉ 1 request đơn giản)
+      await this.sleep(3000); // 3 giây
 
       if (totalQuestions === 0) {
         // Fallback: Thử lấy toàn bộ nếu không đếm được
         console.log('Cannot count questions, trying to get all at once...');
-        return await this.generateQuizFromPDFChunk(filePath, 1, 999);
+
+        if (progressCallback) {
+          await progressCallback(1, 1, 0, 0, 'Extracting all questions...');
+        }
+
+        const result = await this.generateQuizFromPDFChunk(filePath, 1, 999);
+
+        if (progressCallback) {
+          await progressCallback(1, 1, result.length, result.length, 'Completed');
+        }
+
+        return result;
       }
 
       // Tính số lần cần chia
@@ -217,6 +235,16 @@ Chỉ trả về JSON array, không thêm bất kỳ text nào khác.`;
         const endQuestion = Math.min((i + 1) * QUESTIONS_PER_CHUNK, totalQuestions);
 
         console.log(`[${new Date().toISOString()}] Processing chunk ${i + 1}/${numChunks}: questions ${startQuestion}-${endQuestion}`);
+
+        if (progressCallback) {
+          await progressCallback(
+            i + 1,
+            numChunks,
+            allQuestions.length,
+            totalQuestions,
+            `Processing chunk ${i + 1}/${numChunks} (questions ${startQuestion}-${endQuestion})`
+          );
+        }
 
         try {
           const chunkQuestions = await this.generateQuizFromPDFChunk(
@@ -235,7 +263,7 @@ Chỉ trả về JSON array, không thêm bất kỳ text nào khác.`;
 
           allQuestions.push(...cleanedQuestions);
 
-          // Delay giữa các request để tránh rate limit (15 giây = 4 requests/minute)
+          // Delay giữa các request để tránh rate limit (5 giây = 12 requests/minute)
           if (i < numChunks - 1) {
             console.log(`Waiting ${DELAY_BETWEEN_REQUESTS / 1000} seconds before next request...`);
             await this.sleep(DELAY_BETWEEN_REQUESTS);
@@ -246,6 +274,11 @@ Chỉ trả về JSON array, không thêm bất kỳ text nào khác.`;
           // Nếu lỗi là rate limit, chờ lâu hơn
           if (error.message.includes('429') || error.message.includes('quota') || error.message.includes('rate limit')) {
             console.log('Rate limit detected, waiting 60 seconds...');
+
+            if (progressCallback) {
+              await progressCallback(i + 1, numChunks, allQuestions.length, totalQuestions, 'Rate limit hit, waiting 60 seconds...');
+            }
+
             await this.sleep(60000);
 
             // Retry chunk này
@@ -278,6 +311,10 @@ Chỉ trả về JSON array, không thêm bất kỳ text nào khác.`;
 
       if (allQuestions.length === 0) {
         throw new Error('No questions could be extracted from the PDF');
+      }
+
+      if (progressCallback) {
+        await progressCallback(numChunks, numChunks, allQuestions.length, totalQuestions, 'Completed successfully');
       }
 
       return allQuestions;

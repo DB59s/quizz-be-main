@@ -11,6 +11,16 @@ app.use(corsMiddleware); // CORS configuration
 app.use(express.json({ limit: '10mb' })); // Parse JSON bodies
 app.use(express.urlencoded({ extended: true, limit: '10mb' })); // Parse URL-encoded bodies
 
+// Increase timeout for long-running AI requests (10 minutes)
+app.use((req, res, next) => {
+  // Set server timeout to 10 minutes for AI processing endpoints
+  if (req.path.includes('/gemini/')) {
+    req.setTimeout(600000); // 10 minutes
+    res.setTimeout(600000); // 10 minutes
+  }
+  next();
+});
+
 // Request logging middleware
 app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);

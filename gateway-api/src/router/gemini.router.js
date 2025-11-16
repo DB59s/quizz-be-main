@@ -17,7 +17,8 @@ const router = express.Router();
  * @swagger
  * /api/v1/gemini/generate-quiz:
  *   post:
- *     summary: Generate quiz questions from PDF file (Teachers only)
+ *     summary: Generate quiz questions from PDF file - Async (Teachers only)
+ *     description: Starts quiz generation and returns a job_id immediately. Use the quiz-status endpoint to check progress.
  *     tags: [Gemini AI]
  *     security:
  *       - BearerAuth: []
@@ -35,8 +36,8 @@ const router = express.Router();
  *                 format: binary
  *                 description: PDF file containing exam questions or study material
  *     responses:
- *       200:
- *         description: Quiz questions generated successfully
+ *       202:
+ *         description: Quiz generation started - returns job_id
  *         content:
  *           application/json:
  *             schema:
@@ -47,42 +48,19 @@ const router = express.Router();
  *                   example: true
  *                 message:
  *                   type: string
- *                   example: Quiz questions generated successfully
+ *                   example: Quiz generation started. Use the job_id to check status.
  *                 data:
  *                   type: object
  *                   properties:
- *                     total:
- *                       type: integer
- *                       example: 10
- *                     questions:
- *                       type: array
- *                       items:
- *                         type: object
- *                         properties:
- *                           content:
- *                             type: string
- *                             example: "What is the capital of France?"
- *                           level:
- *                             type: integer
- *                             enum: [1, 2, 3, 4]
- *                             description: "1=EASY, 2=MEDIUM, 3=HARD, 4=VERY_HARD"
- *                             example: 1
- *                           type:
- *                             type: string
- *                             enum: ["1", "2"]
- *                             description: "1=single answer, 2=multiple answers"
- *                             example: "1"
- *                           answers:
- *                             type: array
- *                             items:
- *                               type: object
- *                               properties:
- *                                 content:
- *                                   type: string
- *                                   example: "Paris"
- *                                 is_true:
- *                                   type: boolean
- *                                   example: true
+ *                     job_id:
+ *                       type: string
+ *                       example: "550e8400-e29b-41d4-a716-446655440000"
+ *                     status:
+ *                       type: string
+ *                       example: "processing"
+ *                     check_status_url:
+ *                       type: string
+ *                       example: "/api/v1/gemini/quiz-status/550e8400-e29b-41d4-a716-446655440000"
  *       400:
  *         description: Bad request - missing file or invalid file type
  *       401:
@@ -93,6 +71,74 @@ const router = express.Router();
  *         description: Internal server error
  */
 router.post('/generate-quiz', verifyToken, requireRoleOnly(['teacher']), uploadPDF.single('file'), geminiController.generateQuiz);
+
+/**
+ * @swagger
+ * /api/v1/gemini/quiz-status/{jobId}:
+ *   get:
+ *     summary: Get quiz generation job status (Teachers only)
+ *     description: Check the status of an async quiz generation job
+ *     tags: [Gemini AI]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: jobId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Job ID returned from generate-quiz endpoint
+ *     responses:
+ *       200:
+ *         description: Job status retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     job_id:
+ *                       type: string
+ *                     status:
+ *                       type: string
+ *                       enum: [pending, processing, completed, failed]
+ *                     progress:
+ *                       type: string
+ *                       example: "Processing chunk 2/3 (questions 41-80)"
+ *                     total_questions:
+ *                       type: integer
+ *                     processed_questions:
+ *                       type: integer
+ *                     current_chunk:
+ *                       type: integer
+ *                     total_chunks:
+ *                       type: integer
+ *                     total:
+ *                       type: integer
+ *                       description: Only present when completed
+ *                     questions:
+ *                       type: array
+ *                       description: Only present when completed
+ *                     error:
+ *                       type: string
+ *                       description: Only present when failed
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - only teachers can access
+ *       404:
+ *         description: Job not found
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/quiz-status/:jobId', verifyToken, requireRoleOnly(['teacher']), geminiController.getQuizStatus);
 
 /**
  * @swagger

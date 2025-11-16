@@ -9,7 +9,7 @@ const CHATBOT_SERVICE_BASEURL = process.env.CHATBOT_SERVICE_BASEURL || 'http://c
  */
 class GeminiController {
   /**
-   * Generate quiz questions from PDF file
+   * Generate quiz questions from PDF file (Async)
    * POST /api/v1/gemini/generate-quiz
    * Only accessible by teachers
    */
@@ -35,7 +35,7 @@ class GeminiController {
         });
       }
 
-      console.log('[Gateway] Forwarding PDF to Chatbot Service for quiz generation...');
+      console.log('[Gateway] Forwarding PDF to Chatbot Service for async quiz generation...');
       console.log('[Gateway] File:', req.file.originalname, '- Size:', req.file.size, 'bytes');
 
       // Create form data to forward to chatbot service
@@ -45,9 +45,7 @@ class GeminiController {
         contentType: req.file.mimetype
       });
 
-      // Call chatbot service
-      // Timeout phải đủ lớn cho việc xử lý nhiều chunks
-      // Ví dụ: 97 câu = 3 chunks, mỗi chunk 15s delay = ~60s + processing time
+      // Call chatbot service - now returns immediately with job_id
       const response = await axios.post(
         `${CHATBOT_SERVICE_BASEURL}/gemini/generate-quiz`,
         formData,
@@ -57,7 +55,7 @@ class GeminiController {
           },
           maxContentLength: Infinity,
           maxBodyLength: Infinity,
-          timeout: 300000 // 5 phút timeout để đủ cho xử lý nhiều chunks
+          timeout: 30000 // 30 giây timeout (chỉ cần đủ để tạo job)
         }
       );
 
@@ -66,11 +64,11 @@ class GeminiController {
         fs.unlinkSync(req.file.path);
       }
 
-      console.log('[Gateway] Quiz generation successful:', response.data.data?.total, 'questions');
+      console.log('[Gateway] Quiz generation job created:', response.data.data?.job_id);
 
-      return res.status(200).json({
+      return res.status(202).json({
         success: true,
-        message: 'Quiz questions generated successfully',
+        message: response.data.message,
         data: response.data.data
       });
 
@@ -94,6 +92,50 @@ class GeminiController {
       return res.status(500).json({
         success: false,
         message: 'Failed to generate quiz questions',
+        error: error.message
+      });
+    }
+  }
+
+  /**
+   * Get quiz generation job status
+   * GET /api/v1/gemini/quiz-status/:jobId
+   */
+  async getQuizStatus(req, res) {
+    try {
+      const { jobId } = req.params;
+
+      console.log('[Gateway] Checking quiz status for job:', jobId);
+
+      // Call chatbot service
+      const response = await axios.get(
+        `${CHATBOT_SERVICE_BASEURL}/gemini/quiz-status/${jobId}`,
+        {
+          timeout: 10000 // 10 giây timeout
+        }
+      );
+
+      return res.status(200).json({
+        success: true,
+        message: response.data.message,
+        data: response.data.data
+      });
+
+    } catch (error) {
+      console.error('[Gateway] Error checking quiz status:', error.message);
+
+      if (error.response) {
+        // Forward error from chatbot service
+        return res.status(error.response.status).json({
+          success: false,
+          message: error.response.data?.message || 'Failed to get quiz status',
+          error: error.response.data?.error
+        });
+      }
+
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to get quiz status',
         error: error.message
       });
     }
