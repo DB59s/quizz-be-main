@@ -145,7 +145,7 @@ services:
       DB_LOGGING: "false"
       # JWT configuration
       JWT_SECRET: your-super-secret-jwt-key-change-this-in-production
-      JWT_EXPIRES_IN: 180m
+      JWT_EXPIRES_IN: 7d
       REFRESH_TOKEN_EXPIRES_DAYS: 7
       # API Gateway configuration
       USER_SERVICE_BASEURL: http://user-service-api:9004/api/v1
@@ -161,8 +161,8 @@ services:
       CHATBOT_SERVICE_BASEURL: http://chatbot-service-api:9013/api/v1
       KNOWLEDGE_SERVICE_BASEURL: http://knowledge-service-api:9009
       # Google configuration
-      GOOGLE_CLIENT_ID: 70714368044-ggb9g17lp5vtr6elo9gtrkvvpq9hgflb.apps.googleusercontent.com
-      GOOGLE_CLIENT_SECRET: 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
+      GOOGLE_CLIENT_ID: 821013896967-o2tdjt8f265omvps8600056mi585tev6.apps.googleusercontent.com
+      GOOGLE_CLIENT_SECRET: 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
       # Production URL configuration
       API_BASE_URL: https://api.vuquangduy.io.vn
       FRONTEND_URL: https://api.vuquangduy.io.vn
