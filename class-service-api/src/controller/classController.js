@@ -658,11 +658,15 @@ const getTeacherClassesCount = async (req, res) => {
       });
     }
 
-    const count = await Class.countDocuments({ teacher_id });
+    // Only count active classes
+    const count = await Class.countDocuments({ 
+      teacher_id,
+      status: CLASS_STATUS.ACTIVE 
+    });
 
     return res.status(200).json({
       success: true,
-      message: 'Total classes count retrieved successfully',
+      message: 'Total active classes count retrieved successfully',
       data: { count }
     });
   } catch (error) {
@@ -691,11 +695,14 @@ const getTeacherStudentsCount = async (req, res) => {
       });
     }
 
-    // Get all classes of the teacher
-    const classes = await Class.find({ teacher_id }).select('_id');
+    // Get all active classes of the teacher
+    const classes = await Class.find({ 
+      teacher_id,
+      status: CLASS_STATUS.ACTIVE 
+    }).select('_id');
     const classIds = classes.map(c => c._id);
 
-    // Count approved students in all these classes
+    // Count approved students in all these active classes
     const count = await StudentClass.countDocuments({
       class_id: { $in: classIds },
       status: STUDENT_CLASS_STATUS.APPROVED

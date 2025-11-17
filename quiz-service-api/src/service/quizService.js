@@ -58,7 +58,8 @@ class QuizService {
         name: name.trim(),
         description: description ? description.trim() : null,
         teacher_id,
-        total_time: total_time || null
+        total_time: total_time || null,
+        total_question: question_ids.length
       });
       const savedQuiz = await quizRepository.save(quiz);
 
@@ -82,6 +83,7 @@ class QuizService {
         description: savedQuiz.description,
         teacher_id: savedQuiz.teacher_id,
         total_time: savedQuiz.total_time,
+        total_question: savedQuiz.total_question,
         created_at: savedQuiz.created_at,
         updated_at: savedQuiz.updated_at,
         question_ids
@@ -139,6 +141,7 @@ class QuizService {
           description: q.description,
           teacher_id: q.teacher_id,
           total_time: q.total_time,
+          total_question: q.total_question,
           created_at: q.created_at,
           updated_at: q.updated_at
         })),
@@ -227,6 +230,7 @@ class QuizService {
         description: quiz.description,
         teacher_id: quiz.teacher_id,
         total_time: quiz.total_time,
+        total_question: quiz.total_question,
         created_at: quiz.created_at,
         updated_at: quiz.updated_at,
         questions

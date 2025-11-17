@@ -28,6 +28,12 @@ module.exports = new EntitySchema({
       nullable: true,
       comment: 'Total time to complete quiz in seconds',
     },
+    total_question: {
+      type: 'integer',
+      nullable: false,
+      default: 0,
+      comment: 'Total number of questions in quiz',
+    },
     created_at: {
       type: 'timestamp',
       nullable: false,
