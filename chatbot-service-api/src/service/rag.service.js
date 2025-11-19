@@ -5,8 +5,8 @@ const { env } = require('../config');
 
 // Initialize Gemini AI
 const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
-const classifierModel = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
-const generatorModel = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
+const classifierModel = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+const generatorModel = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
 // Get repositories
 const getConvRepo = () => AppDataSource.getRepository('Conversation');
@@ -272,11 +272,11 @@ ${JSON.stringify(retrievalData, null, 2)}
 Hãy giải thích và hướng dẫn học sinh trả lời câu hỏi: "${prompt}"
 
 Yêu cầu:
-- KHÔNG được tiết lộ đáp án đúng trực tiếp
 - Giải thích các khái niệm liên quan đến câu hỏi
-- Phân tích từng đáp án một cách khách quan
+- Phân tích từng đáp án 
 - Hướng dẫn cách suy luận để tìm ra đáp án đúng
-- Giúp học sinh tự rút ra kết luận`;
+- Giúp học sinh tự rút ra kết luận
+- Đưa ra đáp án ở cuối câu trả lời `;
   }
 
   if (type === 'knowledge_base' && retrievalData && Array.isArray(retrievalData)) {
@@ -289,7 +289,8 @@ Hãy trả lời câu hỏi: "${prompt}"
 Yêu cầu:
 - Trả lời chính xác dựa trên kiến thức được cung cấp
 - Giải thích rõ ràng, dễ hiểu
-- Nếu kiến thức không đủ để trả lời, hãy nói rõ`;
+- Nếu kiến thức không đủ để trả lời, hãy trả lời theo kiến thức của bạn
+- Trong câu trả lời thì trả lời luôn vào vấn đề mà học sinh hỏi, không cần phải trả lời dài dòng(ví dụ như dựa vào kiến thức bạn cung cấp ,.....)`;
   }
 
   // For 'history' type, just return the prompt

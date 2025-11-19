@@ -8,12 +8,7 @@ class GeminiService {
       throw new Error('GEMINI_API_KEY is not configured in environment variables');
     }
     this.genAI = new GoogleGenerativeAI(apiKey);
-    this.model = this.genAI.getGenerativeModel({
-      model: 'gemini-2.0-flash-exp',
-      generationConfig: {
-        maxOutputTokens: 8192, // Tăng giới hạn token output
-      }
-    });
+    this.model = this.genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
   }
 
   /**
