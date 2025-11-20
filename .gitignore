@@ -63,6 +63,8 @@ backups/
 *.key
 id_rsa
 id_ed25519
+github_actions_deploy
+github_actions_deploy.pub
 
 # Certificates
 *.crt
