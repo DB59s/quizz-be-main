@@ -387,6 +387,8 @@ services:
         condition: service_healthy
     # volumes:
     #   - ./chatbot-service-api/src:/app/src
+    env_file:
+      - ./chatbot-service-api/.env
     environment:
       NODE_ENV: production
       PORT: 9013
@@ -402,8 +404,7 @@ services:
       # CORS configuration - Allow all origins
       CORS_ORIGIN: "*"
       CORS_CREDENTIALS: "false"
-      # Gemini API
-      GEMINI_API_KEY: AIzaSyAeayCsv1fWTQkbHHNny_EmIjZQl5zhax8
+      # Gemini API Key is loaded from ./chatbot-service-api/.env file
       # External Services (no authentication required)
       QUESTION_SERVICE_BASEURL: http://question-service-api:9012/api/v1
       QUESTION_SERVICE_API_TOKEN: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
