@@ -1153,7 +1153,9 @@ class SubmissionService {
         throw new Error('Failed to fetch student classes');
       }
 
-      const studentClasses = studentClassesResponse.data.data || [];
+      const studentClasses = Array.isArray(studentClassesResponse.data.data)
+        ? studentClassesResponse.data.data
+        : [];
       console.log(`[Submission Service] Found ${studentClasses.length} classes for student`);
 
       if (studentClasses.length === 0) {
