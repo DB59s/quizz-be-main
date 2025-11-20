@@ -10,7 +10,8 @@ const {
   getSubmissionsByClassQuiz,
   getSubmissionResultForTeacher,
   getQuizStatistics,
-  getMySubmissions
+  getMySubmissions,
+  getMyQuizzesStatus
 } = require('../controller/submission.controller');
 
 const router = express.Router();
@@ -193,6 +194,59 @@ router.post('/', verifyToken, requireRoleOnly(['student']), createSubmission);
  *         description: Forbidden - Student access only
  */
 router.get('/me', verifyToken, requireRoleOnly(['student']), getMySubmissions);
+
+/**
+ * @swagger
+ * /api/v1/submissions/quizzes/status:
+ *   get:
+ *     summary: Get quizzes status for student
+ *     description: Retrieve all quizzes from student's classes with their status (completed, available, upcoming, expired)
+ *     tags: [Submissions]
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Quizzes status retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Quizzes status retrieved successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     completed:
+ *                       type: array
+ *                       description: Quizzes that student has completed
+ *                       items:
+ *                         type: object
+ *                     available:
+ *                       type: array
+ *                       description: Quizzes currently available but not submitted
+ *                       items:
+ *                         type: object
+ *                     upcoming:
+ *                       type: array
+ *                       description: Quizzes not yet started
+ *                       items:
+ *                         type: object
+ *                     expired:
+ *                       type: array
+ *                       description: Quizzes that are expired and not submitted
+ *                       items:
+ *                         type: object
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - Student access only
+ */
+router.get('/quizzes/status', verifyToken, requireRoleOnly(['student']), getMyQuizzesStatus);
 
 /**
  * @swagger

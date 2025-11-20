@@ -465,6 +465,47 @@ class SubmissionController {
   }
 
   /**
+   * Get quizzes status for student
+   * GET /api/submissions/student/:student_id/quizzes-status
+   */
+  async getStudentQuizzesStatus(req, res) {
+    try {
+      const { student_id } = req.params;
+
+      if (!student_id) {
+        return res.status(400).json({
+          success: false,
+          message: 'student_id is required',
+          data: null
+        });
+      }
+
+      const result = await submissionService.getStudentQuizzesStatus(student_id);
+
+      return res.status(200).json({
+        success: true,
+        message: 'Quizzes status retrieved successfully',
+        data: result
+      });
+    } catch (error) {
+      console.error('Error getting student quizzes status:', error);
+
+      let statusCode = 500;
+      if (error.statusCode === 404) {
+        statusCode = 404;
+      } else if (error.statusCode === 403) {
+        statusCode = 403;
+      }
+
+      return res.status(statusCode).json({
+        success: false,
+        message: error.message || 'Failed to get quizzes status',
+        data: null
+      });
+    }
+  }
+
+  /**
    * Get submission summary for student
    * GET /api/submissions/student/:student_id/summary
    */

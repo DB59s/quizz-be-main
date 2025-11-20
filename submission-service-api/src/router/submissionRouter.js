@@ -481,6 +481,48 @@ router.get('/student/:student_id', submissionController.getSubmissionsByStudent.
 
 /**
  * @swagger
+ * /submissions/student/{student_id}/quizzes-status:
+ *   get:
+ *     summary: Get quizzes status for student
+ *     description: Get all quizzes from student's classes with status (completed, available, upcoming, expired)
+ *     tags: [Submissions]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: student_id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Student ID
+ *     responses:
+ *       200:
+ *         description: Quizzes status retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     completed:
+ *                       type: array
+ *                     available:
+ *                       type: array
+ *                     upcoming:
+ *                       type: array
+ *                     expired:
+ *                       type: array
+ */
+router.get('/student/:student_id/quizzes-status', submissionController.getStudentQuizzesStatus.bind(submissionController));
+
+/**
+ * @swagger
  * /submissions/student/{student_id}/summary:
  *   get:
  *     summary: Get submission summary for student

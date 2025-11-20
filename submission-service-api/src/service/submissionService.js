@@ -1130,6 +1130,194 @@ class SubmissionService {
   }
 
   /**
+   * Get quizzes status for student
+   * @param {string} student_id - Student ID
+   * @returns {Promise<Object>} { completed: [], available: [], upcoming: [], expired: [] }
+   */
+  async getStudentQuizzesStatus(student_id) {
+    try {
+      await this.init();
+
+      console.log(`[Submission Service] Getting quizzes status for student ${student_id}`);
+
+      // Step 1: Get all classes of student from Class Service
+      let studentClassesResponse;
+      try {
+        studentClassesResponse = await classService('GET', `/student-classes/${student_id}`, null, {
+          headers: {
+            'x-service-call': 'true'
+          }
+        });
+      } catch (error) {
+        console.error('Failed to fetch student classes:', error.message);
+        throw new Error('Failed to fetch student classes');
+      }
+
+      const studentClasses = studentClassesResponse.data.data || [];
+      console.log(`[Submission Service] Found ${studentClasses.length} classes for student`);
+
+      if (studentClasses.length === 0) {
+        return {
+          completed: [],
+          available: [],
+          upcoming: [],
+          expired: []
+        };
+      }
+
+      // Extract class IDs (only approved enrollments)
+      const classIds = studentClasses
+        .filter(sc => sc.is_approved === 1)
+        .map(sc => sc.class_id);
+
+      if (classIds.length === 0) {
+        return {
+          completed: [],
+          available: [],
+          upcoming: [],
+          expired: []
+        };
+      }
+
+      console.log(`[Submission Service] Student is approved in ${classIds.length} classes:`, classIds);
+
+      // Step 2: Get all class quizzes for these classes from Quiz Service
+      const allClassQuizzes = [];
+      for (const class_id of classIds) {
+        try {
+          const classQuizzesResponse = await quizService('GET', `/class-quizzes/class/${class_id}`, null, {
+            headers: {
+              'x-service-call': 'true'
+            }
+          });
+
+          if (classQuizzesResponse.data.success && classQuizzesResponse.data.data) {
+            const classQuizzes = Array.isArray(classQuizzesResponse.data.data)
+              ? classQuizzesResponse.data.data
+              : [classQuizzesResponse.data.data];
+            allClassQuizzes.push(...classQuizzes);
+          }
+        } catch (error) {
+          console.warn(`Failed to fetch class quizzes for class ${class_id}:`, error.message);
+          // Continue with other classes
+        }
+      }
+
+      console.log(`[Submission Service] Found ${allClassQuizzes.length} class quizzes`);
+
+      if (allClassQuizzes.length === 0) {
+        return {
+          completed: [],
+          available: [],
+          upcoming: [],
+          expired: []
+        };
+      }
+
+      // Step 3: Get all submissions for this student
+      const submissions = await this.submissionRepository.find({
+        where: { student_id: student_id }
+      });
+
+      // Create a map of submissions by class_quiz_id for quick lookup
+      const submissionsMap = new Map();
+      submissions.forEach(sub => {
+        submissionsMap.set(sub.class_quiz_id, sub);
+      });
+
+      console.log(`[Submission Service] Student has ${submissions.length} submissions`);
+
+      // Step 4: Categorize quizzes based on time and submission status
+      const completed = [];
+      const available = [];
+      const upcoming = [];
+      const expired = [];
+
+      const now = new Date();
+
+      for (const classQuiz of allClassQuizzes) {
+        const startTime = new Date(classQuiz.start_time);
+        const endTime = new Date(classQuiz.end_time);
+        const submission = submissionsMap.get(classQuiz.id);
+
+        // Get quiz details
+        let quizDetails = null;
+        try {
+          const quizResponse = await quizService('GET', `/quizzes/${classQuiz.quiz_id}`, null, {
+            headers: {
+              'x-service-call': 'true'
+            }
+          });
+          quizDetails = quizResponse.data.data;
+        } catch (error) {
+          console.warn(`Failed to fetch quiz ${classQuiz.quiz_id}:`, error.message);
+          continue;
+        }
+
+        // Get class details
+        let classDetails = null;
+        try {
+          const classResponse = await classService('GET', `/classes/${classQuiz.class_id}`, null, {
+            headers: {
+              'x-service-call': 'true'
+            }
+          });
+          classDetails = classResponse.data.data;
+        } catch (error) {
+          console.warn(`Failed to fetch class ${classQuiz.class_id}:`, error.message);
+        }
+
+        const quizInfo = {
+          class_quiz_id: classQuiz.id,
+          quiz_id: classQuiz.quiz_id,
+          quiz_name: quizDetails?.name || 'Unknown Quiz',
+          quiz_description: quizDetails?.description || null,
+          class_id: classQuiz.class_id,
+          class_name: classDetails?.class_name || 'Unknown Class',
+          start_time: classQuiz.start_time,
+          end_time: classQuiz.end_time,
+          total_time: quizDetails?.total_time || null,
+          total_questions: quizDetails?.questions?.length || 0
+        };
+
+        // Categorize quiz
+        if (submission) {
+          // Student has submitted this quiz
+          completed.push({
+            ...quizInfo,
+            submission_id: submission.id,
+            submission_time: submission.submission_time,
+            score: submission.score,
+            n_total_true: submission.n_total_true,
+            status: submission.status
+          });
+        } else if (now < startTime) {
+          // Quiz hasn't started yet
+          upcoming.push(quizInfo);
+        } else if (now >= startTime && now <= endTime) {
+          // Quiz is currently available
+          available.push(quizInfo);
+        } else {
+          // Quiz has expired and not submitted
+          expired.push(quizInfo);
+        }
+      }
+
+      console.log(`[Submission Service] Categorized quizzes - Completed: ${completed.length}, Available: ${available.length}, Upcoming: ${upcoming.length}, Expired: ${expired.length}`);
+
+      return {
+        completed,
+        available,
+        upcoming,
+        expired
+      };
+    } catch (error) {
+      console.error('Error getting student quizzes status:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Get score distribution for teacher's quizzes
    * @param {string} teacher_id - Teacher ID
    * @returns {Promise<Array>} Score distribution array

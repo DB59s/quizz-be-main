@@ -520,6 +520,60 @@ async function getMySubmissions(req, res) {
 }
 
 /**
+ * GET /api/v1/submissions/quizzes/status - Get quizzes status (Student only)
+ */
+async function getMyQuizzesStatus(req, res) {
+  try {
+    const student_id = req.user.user_id;
+
+    console.log(`[Gateway] Student ${student_id} fetching quizzes status`);
+
+    // Call Submission Service
+    const response = await callService(
+      {
+        serviceName: 'Submission Service',
+        baseUrl: SUBMISSION_SERVICE_URL,
+        apiToken: SUBMISSION_SERVICE_TOKEN
+      },
+      'GET',
+      `/submissions/student/${student_id}/quizzes-status`,
+      null,
+      {
+        headers: {
+          'x-user-id': student_id
+        }
+      }
+    );
+
+    return res.status(response.status).json(response.data);
+  } catch (error) {
+    console.error('[Gateway] Error fetching quizzes status:', error.message);
+
+    if (error.statusCode) {
+      return res.status(error.statusCode).json(error.response || {
+        success: false,
+        message: error.message,
+        data: null
+      });
+    }
+
+    if (error.response) {
+      return res.status(error.response.status || 500).json(error.response.data || {
+        success: false,
+        message: error.message,
+        data: null
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to fetch quizzes status',
+      data: null
+    });
+  }
+}
+
+/**
  * POST /api/v1/submissions/:submission_id/grade - Grade a submission (Internal/Admin only)
  */
 async function gradeSubmission(req, res) {
@@ -577,5 +631,6 @@ module.exports = {
   getSubmissionsByClassQuiz,
   getSubmissionResultForTeacher,
   getQuizStatistics,
-  getMySubmissions
+  getMySubmissions,
+  getMyQuizzesStatus
 };
