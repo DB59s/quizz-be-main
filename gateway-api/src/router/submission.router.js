@@ -9,7 +9,8 @@ const {
   getSubmissionResult,
   getSubmissionsByClassQuiz,
   getSubmissionResultForTeacher,
-  getQuizStatistics
+  getQuizStatistics,
+  getMySubmissions
 } = require('../controller/submission.controller');
 
 const router = express.Router();
@@ -120,6 +121,78 @@ const router = express.Router();
  */
 router.get('/', verifyToken, requireRoleOnly(['admin']), getAllSubmissions);
 router.post('/', verifyToken, requireRoleOnly(['student']), createSubmission);
+
+/**
+ * @swagger
+ * /api/v1/submissions/me:
+ *   get:
+ *     summary: Get my submissions (Student only)
+ *     description: Retrieve all submissions of the currently logged-in student
+ *     tags: [Submissions]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number for pagination
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Number of items per page
+ *       - in: query
+ *         name: class_id
+ *         schema:
+ *           type: string
+ *         description: Filter by class ID
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [submitted, graded]
+ *         description: Filter by submission status
+ *     responses:
+ *       200:
+ *         description: Submissions retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Submissions retrieved successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     submissions:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                     pagination:
+ *                       type: object
+ *                       properties:
+ *                         total:
+ *                           type: integer
+ *                         page:
+ *                           type: integer
+ *                         limit:
+ *                           type: integer
+ *                         totalPages:
+ *                           type: integer
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - Student access only
+ */
+router.get('/me', verifyToken, requireRoleOnly(['student']), getMySubmissions);
 
 /**
  * @swagger

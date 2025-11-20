@@ -455,6 +455,71 @@ async function getQuizStatistics(req, res) {
 }
 
 /**
+ * GET /api/v1/submissions/me - Get my submissions (Student only)
+ */
+async function getMySubmissions(req, res) {
+  try {
+    const student_id = req.user.user_id;
+    const { page, limit, class_id, status } = req.query;
+
+    console.log(`[Gateway] Student ${student_id} fetching own submissions`);
+
+    // Build query string
+    const params = new URLSearchParams();
+    if (page) params.append('page', page);
+    if (limit) params.append('limit', limit);
+    if (class_id) params.append('class_id', class_id);
+    if (status) params.append('status', status);
+
+    const queryString = params.toString();
+    const path = `/submissions/student/${student_id}${queryString ? `?${queryString}` : ''}`;
+
+    // Call Submission Service
+    const response = await callService(
+      {
+        serviceName: 'Submission Service',
+        baseUrl: SUBMISSION_SERVICE_URL,
+        apiToken: SUBMISSION_SERVICE_TOKEN
+      },
+      'GET',
+      path,
+      null,
+      {
+        headers: {
+          'x-user-id': student_id
+        }
+      }
+    );
+
+    return res.status(response.status).json(response.data);
+  } catch (error) {
+    console.error('[Gateway] Error fetching my submissions:', error.message);
+
+    if (error.statusCode) {
+      return res.status(error.statusCode).json(error.response || {
+        success: false,
+        message: error.message,
+        data: null
+      });
+    }
+
+    if (error.response) {
+      return res.status(error.response.status || 500).json(error.response.data || {
+        success: false,
+        message: error.message,
+        data: null
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to fetch submissions',
+      data: null
+    });
+  }
+}
+
+/**
  * POST /api/v1/submissions/:submission_id/grade - Grade a submission (Internal/Admin only)
  */
 async function gradeSubmission(req, res) {
@@ -511,5 +576,6 @@ module.exports = {
   getSubmissionResult,
   getSubmissionsByClassQuiz,
   getSubmissionResultForTeacher,
-  getQuizStatistics
+  getQuizStatistics,
+  getMySubmissions
 };

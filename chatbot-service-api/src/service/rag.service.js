@@ -290,10 +290,10 @@ Yêu cầu:
 - Trả lời chính xác dựa trên kiến thức được cung cấp
 - Giải thích rõ ràng, dễ hiểu
 - Nếu kiến thức không đủ để trả lời, hãy trả lời theo kiến thức của bạn
-- Trong câu trả lời thì trả lời luôn vào vấn đề mà học sinh hỏi, không cần phải trả lời dài dòng(ví dụ như dựa vào kiến thức bạn cung cấp ,.....)`;
+- Trong câu trả lời thì trả lời luôn vào vấn đề mà học sinh hỏi, không cần phải trả lời dài dòng(ví dụ như dựa vào kiến thức bạn cung cấp ,.....)
+- Không thêm bất kỳ 1 cái gì liên quan trong câu trả lời như trong kiến thức của bạn cung cấp,.....`;
   }
 
-  // For 'history' type, just return the prompt
   return prompt;
 }
 

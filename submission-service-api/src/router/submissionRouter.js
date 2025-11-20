@@ -420,6 +420,67 @@ router.get('/teacher/:teacher_id/score-distribution', submissionController.getTe
 
 /**
  * @swagger
+ * /submissions/student/{student_id}:
+ *   get:
+ *     summary: Get all submissions for a student
+ *     description: Retrieve all submissions of a specific student with optional filters and pagination
+ *     tags: [Submissions]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: student_id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Student ID
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Items per page
+ *       - in: query
+ *         name: class_id
+ *         schema:
+ *           type: string
+ *         description: Filter by class ID
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [submitted, graded]
+ *         description: Filter by submission status
+ *     responses:
+ *       200:
+ *         description: Submissions retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     submissions:
+ *                       type: array
+ *                     pagination:
+ *                       type: object
+ */
+router.get('/student/:student_id', submissionController.getSubmissionsByStudent.bind(submissionController));
+
+/**
+ * @swagger
  * /submissions/student/{student_id}/summary:
  *   get:
  *     summary: Get submission summary for student

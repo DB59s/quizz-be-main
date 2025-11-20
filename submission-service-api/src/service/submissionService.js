@@ -1014,6 +1014,122 @@ class SubmissionService {
   }
 
   /**
+   * Get all submissions for a student with optional filters and pagination
+   * @param {string} student_id - Student ID
+   * @param {Object} options - { page, limit, class_id, status }
+   * @returns {Promise<Object>} { data: submissions[], pagination: {...} }
+   */
+  async getSubmissionsByStudent(student_id, options = {}) {
+    try {
+      await this.init();
+
+      const { page = 1, limit = 10, class_id, status } = options;
+      const skip = (page - 1) * limit;
+
+      // Build query
+      const queryBuilder = this.submissionRepository
+        .createQueryBuilder('submission')
+        .where('submission.student_id = :student_id', { student_id })
+        .leftJoinAndSelect('submission.answers', 'answers')
+        .orderBy('submission.submission_time', 'DESC');
+
+      // Apply status filter if provided
+      if (status) {
+        queryBuilder.andWhere('submission.status = :status', { status });
+      }
+
+      // Get total count
+      const totalCount = await queryBuilder.getCount();
+
+      // Get submissions with pagination
+      const submissions = await queryBuilder
+        .skip(skip)
+        .take(limit)
+        .getMany();
+
+      // Build result with quiz information
+      const result = [];
+
+      for (const submission of submissions) {
+        try {
+          // Get ClassQuiz info
+          const classQuizResponse = await quizService('GET', `/class-quizzes/${submission.class_quiz_id}`, null, {
+            headers: {
+              'x-service-call': 'true'
+            }
+          });
+
+          const classQuiz = classQuizResponse.data.data;
+
+          // Apply class_id filter if provided
+          if (class_id && classQuiz && classQuiz.class_id !== class_id) {
+            continue; // Skip this submission
+          }
+
+          // Get Quiz details
+          let quizName = 'Unknown Quiz';
+          let className = 'Unknown Class';
+
+          if (classQuiz && classQuiz.quiz_id) {
+            try {
+              const quizResponse = await quizService('GET', `/quizzes/${classQuiz.quiz_id}`, null, {
+                headers: {
+                  'x-service-call': 'true'
+                }
+              });
+              quizName = quizResponse.data.data?.name || 'Unknown Quiz';
+            } catch (error) {
+              console.warn(`Failed to fetch quiz name for quiz ${classQuiz.quiz_id}`);
+            }
+
+            // Get Class name
+            if (classQuiz.class_id) {
+              try {
+                const classResponse = await classService('GET', `/classes/${classQuiz.class_id}`, null, {
+                  headers: {
+                    'x-service-call': 'true'
+                  }
+                });
+                className = classResponse.data.data?.class_name || 'Unknown Class';
+              } catch (error) {
+                console.warn(`Failed to fetch class name for class ${classQuiz.class_id}`);
+              }
+            }
+          }
+
+          result.push({
+            submission_id: submission.id,
+            class_quiz_id: submission.class_quiz_id,
+            quiz_name: quizName,
+            class_name: className,
+            class_id: classQuiz?.class_id || null,
+            submission_time: submission.submission_time,
+            total_time: submission.total_time,
+            score: submission.score,
+            n_total_true: submission.n_total_true,
+            status: submission.status
+          });
+        } catch (error) {
+          console.warn(`Failed to process submission ${submission.id}: ${error.message}`);
+          // Continue processing other submissions
+        }
+      }
+
+      return {
+        data: result,
+        pagination: {
+          current_page: parseInt(page),
+          items_per_page: parseInt(limit),
+          total_items: totalCount,
+          total_pages: Math.ceil(totalCount / limit)
+        }
+      };
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
    * Get score distribution for teacher's quizzes
    * @param {string} teacher_id - Teacher ID
    * @returns {Promise<Array>} Score distribution array

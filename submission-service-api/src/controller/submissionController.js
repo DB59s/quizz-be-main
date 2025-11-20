@@ -417,6 +417,54 @@ class SubmissionController {
   }
 
   /**
+   * Get all submissions for a student
+   * GET /api/submissions/student/:student_id
+   */
+  async getSubmissionsByStudent(req, res) {
+    try {
+      const { student_id } = req.params;
+      const { page = 1, limit = 10, class_id, status } = req.query;
+
+      if (!student_id) {
+        return res.status(400).json({
+          success: false,
+          message: 'student_id is required',
+          data: null
+        });
+      }
+
+      const result = await submissionService.getSubmissionsByStudent(student_id, {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        class_id,
+        status
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: 'Submissions retrieved successfully',
+        data: result.data,
+        pagination: result.pagination
+      });
+    } catch (error) {
+      console.error('Error getting submissions by student:', error);
+
+      let statusCode = 500;
+      if (error.statusCode === 404) {
+        statusCode = 404;
+      } else if (error.statusCode === 403) {
+        statusCode = 403;
+      }
+
+      return res.status(statusCode).json({
+        success: false,
+        message: error.message || 'Failed to get submissions',
+        data: null
+      });
+    }
+  }
+
+  /**
    * Get submission summary for student
    * GET /api/submissions/student/:student_id/summary
    */
