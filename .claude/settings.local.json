@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(chmod:*)",
+      "Bash(git checkout:*)",
+      "Bash(docker-compose restart:*)",
+      "Bash(docker-compose logs:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

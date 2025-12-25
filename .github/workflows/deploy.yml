@@ -1,0 +1,113 @@
+name: Deploy to Ubuntu Server
+
+on:
+  push:
+    branches:
+      - deploy
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Add server to known hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy to server
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          ssh $SERVER_USER@$SERVER_HOST << 'EOF'
+            set -e
+
+            echo "=========================================="
+            echo "Starting deployment process..."
+            echo "=========================================="
+
+            # Navigate to project directory
+            cd ${{ secrets.DEPLOY_PATH }}
+
+            # Backup current state
+            echo "Creating backup..."
+            timestamp=$(date +%Y%m%d_%H%M%S)
+            backup_dir="../backups/backup_$timestamp"
+            mkdir -p $backup_dir
+            cp -r .env* $backup_dir/ 2>/dev/null || true
+
+            # Pull latest changes
+            echo "Pulling latest changes from deploy branch..."
+            git fetch origin
+            git reset --hard origin/deploy
+            git clean -fd
+
+            # Stop all services
+            echo "Stopping all services..."
+            docker-compose down
+
+            # Remove old images to free up space (optional)
+            echo "Cleaning up old Docker images..."
+            docker image prune -af --filter "until=24h"
+
+            # Build and start services
+            echo "Building and starting services..."
+            docker-compose pull
+            docker-compose build --no-cache
+            docker-compose up -d
+
+            # Wait for services to be healthy
+            echo "Waiting for services to be healthy..."
+            sleep 30
+
+            # Check service status
+            echo "Checking service status..."
+            docker-compose ps
+
+            # Show logs for verification
+            echo "Recent logs:"
+            docker-compose logs --tail=50
+
+            echo "=========================================="
+            echo "Deployment completed successfully!"
+            echo "=========================================="
+          EOF
+
+      - name: Verify deployment
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+        run: |
+          ssh $SERVER_USER@$SERVER_HOST << 'EOF'
+            cd ${{ secrets.DEPLOY_PATH }}
+
+            # Check if all services are running
+            if docker-compose ps | grep -q "Exit"; then
+              echo "ERROR: Some services failed to start!"
+              docker-compose ps
+              exit 1
+            fi
+
+            echo "All services are running successfully!"
+          EOF
+
+      - name: Send notification on success
+        if: success()
+        run: |
+          echo "Deployment to ${{ secrets.SERVER_HOST }} completed successfully!"
+
+      - name: Send notification on failure
+        if: failure()
+        run: |
+          echo "Deployment to ${{ secrets.SERVER_HOST }} failed! Please check the logs."
+          exit 1

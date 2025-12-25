@@ -7,7 +7,7 @@ const REFRESH_TOKEN_EXPIRES_DAYS = parseInt(process.env.REFRESH_TOKEN_EXPIRES_DA
 
 /**
  * Generate an access token (JWT)
- * @param {Object} payload - Token payload containing accountId and role
+ * @param {Object} payload - Token payload containing account_id and role
  * @returns {string} - JWT access token
  */
 function generateAccessToken(payload) {

@@ -1,0 +1,127 @@
+# Environment Variables
+.env
+.env.local
+.env.development
+.env.production
+.env.test
+*.env
+
+# Node Modules
+node_modules/
+**/node_modules/
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+pnpm-debug.log*
+
+# OS Files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+
+# Build Output
+dist/
+build/
+out/
+*.bundle.js
+
+# Docker
+.dockerignore
+
+# Temporary Files
+tmp/
+temp/
+*.tmp
+
+# Database Files
+*.sql
+*.sqlite
+*.db
+
+# Backup Files
+backups/
+*.backup
+*.bak
+
+# SSH Keys
+*.pem
+*.key
+id_rsa
+id_ed25519
+github_actions_deploy
+github_actions_deploy.pub
+
+# Certificates
+*.crt
+*.cert
+*.p12
+*.pfx
+
+# Secrets
+secrets/
+credentials/
+*.secret
+
+# Coverage
+coverage/
+.nyc_output/
+*.lcov
+
+# TypeScript
+*.tsbuildinfo
+
+# Python (for knowledge-service)
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+*.egg-info/
+.pytest_cache/
+
+# Docker Volumes Data (in case they're created locally)
+mysql_*_data/
+postgres_*_data/
+mongo_data/
+
+# MacOS
+.AppleDouble
+.LSOverride
+
+# Windows
+ehthumbs.db
+ehthumbs_vista.db
+
+# Test Files
+test-results/
+*.test.local.*
+
+# Package Manager
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Miscellaneous
+.cache/
+.parcel-cache/
+.npm/
+.eslintcache
+.stylelintcache

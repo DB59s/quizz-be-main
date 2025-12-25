@@ -28,9 +28,33 @@ module.exports = {
   // Google OAuth configuration
   GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || '',
   GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET || '',
-  
+
   // URL configuration for OAuth callbacks
   API_BASE_URL: process.env.API_BASE_URL || 'http://localhost:8080',
   FRONTEND_URL: process.env.FRONTEND_URL || 'http://localhost:8080',
-  FRONTEND_PATH: process.env.FRONTEND_PATH || '/front-end/index.html'
+
+  // Service URLs
+  USER_SERVICE_BASEURL: process.env.USER_SERVICE_BASEURL || 'http://localhost:3001',
+  CLASS_SERVICE_BASEURL: process.env.CLASS_SERVICE_BASEURL || 'http://localhost:3002',
+  QUESTION_SERVICE_BASEURL: process.env.QUESTION_SERVICE_BASEURL || 'http://localhost:3003',
+  QUIZ_SERVICE_BASEURL: process.env.QUIZ_SERVICE_BASEURL || 'http://localhost:9010/api/v1',
+  CHATBOT_SERVICE_BASEURL: process.env.CHATBOT_SERVICE_BASEURL || 'http://localhost:9012/api/v1',
+  KNOWLEDGE_SERVICE_BASEURL: process.env.KNOWLEDGE_SERVICE_BASEURL || 'http://localhost:9013',
+  SUBMISSION_SERVICE_BASEURL: process.env.SUBMISSION_SERVICE_BASEURL || 'http://localhost:9011/api',
+
+  // Service API Tokens
+  USER_SERVICE_API_TOKEN: process.env.USER_SERVICE_API_TOKEN || 'user_service_secret_token_2024',
+  CLASS_SERVICE_API_TOKEN: process.env.CLASS_SERVICE_API_TOKEN || 'your-secret-token-here-change-in-production',
+  QUESTION_SERVICE_API_TOKEN: process.env.QUESTION_SERVICE_API_TOKEN || 'question_service_secret_token_2024',
+  QUIZ_SERVICE_API_TOKEN: process.env.QUIZ_SERVICE_API_TOKEN || 'quiz_service_secret_token_2024',
+  SUBMISSION_SERVICE_API_TOKEN: process.env.SUBMISSION_SERVICE_API_TOKEN || 'submission_service_secret_token_2024',
+
+  // Email configuration
+  EMAIL_USER: process.env.EMAIL_USER || 'vuduy050903@gmail.com',
+  EMAIL_PASS: process.env.EMAIL_PASS || 'zfsfiyzrschweqgm',
+  EMAIL_HOST: process.env.EMAIL_HOST || 'smtp.gmail.com',
+  EMAIL_PORT: parseInt(process.env.EMAIL_PORT) || 587,
+  
+  // OTP configuration
+  OTP_EXPIRES_MINUTES: parseInt(process.env.OTP_EXPIRES_MINUTES) || 5
 };

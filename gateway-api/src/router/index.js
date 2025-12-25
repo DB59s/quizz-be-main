@@ -1,5 +1,18 @@
 const express = require('express');
 const authRouter = require('./auth.router');
+const userRouter = require('./user.router');
+const adminRouter = require('./admin.router');
+const classRouter = require('./class.router');
+const studentClassRouter = require('./student-class.router');
+const subjectRouter = require('./subject.router');
+const questionRouter = require('./question.router');
+const quizRouter = require('./quiz.router');
+const classQuizRouter = require('./classQuiz.router');
+const submissionRouter = require('./submission.router');
+const dashboardRouter = require('./dashboard.router');
+const chatbotRouter = require('./chatbot.router');
+const knowledgeRouter = require('./knowledge.router');
+const geminiRouter = require('./gemini.router');
 
 const router = express.Router();
 
@@ -12,10 +25,23 @@ const router = express.Router();
 
 // Mount all routers
 router.use('/auth', authRouter);
+router.use('/users', userRouter);
+router.use('/admin', adminRouter);
+router.use('/classes', classRouter);
+router.use('/student-classes', studentClassRouter);
+router.use('/subjects', subjectRouter);
+router.use('/questions', questionRouter);
+router.use('/quizzes', quizRouter);
+router.use('/class-quizzes', classQuizRouter);
+router.use('/submissions', submissionRouter);
+router.use('/dashboard', dashboardRouter);
+router.use('/chatbot', chatbotRouter);
+router.use('/knowledge', knowledgeRouter);
+router.use('/gemini', geminiRouter);
 
 /**
  * @swagger
- * /api/health:
+ * /api/v1/health:
  *   get:
  *     summary: Health check endpoint
  *     tags: [General]
@@ -48,7 +74,7 @@ router.get('/health', (req, res) => {
 
 /**
  * @swagger
- * /api:
+ * /api/v1:
  *   get:
  *     summary: API welcome endpoint
  *     tags: [General]
@@ -65,7 +91,7 @@ router.get('/health', (req, res) => {
  *                   example: true
  *                 message:
  *                   type: string
- *                   example: "Welcome to Base Backend API"
+ *                   example: "Welcome to Gateway API v1"
  *                 version:
  *                   type: string
  *                   example: "1.0.0"
@@ -74,19 +100,36 @@ router.get('/health', (req, res) => {
  *                   properties:
  *                     health:
  *                       type: string
- *                       example: "/api/health"
+ *                       example: "/api/v1/health"
  *                     auth:
  *                       type: string
- *                       example: "/api/auth"
+ *                       example: "/api/v1/auth"
+ *                     users:
+ *                       type: string
+ *                       example: "/api/v1/users"
+ *                     admin:
+ *                       type: string
+ *                       example: "/api/v1/admin"
  */
 router.get('/', (req, res) => {
   res.status(200).json({
     success: true,
-    message: 'Welcome to Base Backend API',
+    message: 'Welcome to Gateway API v1',
     version: '1.0.0',
     endpoints: {
-      health: '/api/health',
-      auth: '/api/auth',
+      health: '/api/v1/health',
+      auth: '/api/v1/auth',
+      users: '/api/v1/users',
+      admin: '/api/v1/admin',
+      classes: '/api/v1/classes',
+      studentClasses: '/api/v1/student-classes',
+      subjects: '/api/v1/subjects',
+      questions: '/api/v1/questions',
+      quizzes: '/api/v1/quizzes',
+      classQuizzes: '/api/v1/class-quizzes',
+      submissions: '/api/v1/submissions',
+      chatbot: '/api/v1/chatbot',
+      gemini: '/api/v1/gemini',
       docs: '/api-docs'
     }
   });

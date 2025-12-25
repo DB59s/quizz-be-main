@@ -44,9 +44,21 @@ function verifyToken(req, res, next) {
     
     // Attach user info to request
     req.user = {
-      accountId: decoded.accountId,
-      role: decoded.role
+      account_id: decoded?.account_id,
+      role: decoded?.role,
+      user_id: decoded?.user_id, // Always set user_id
     };
+
+    // Map user_id to specific role-based ID
+    if (decoded?.user_id) {
+      if (decoded.role === 'admin') {
+        req.user.admin_id = decoded.user_id;
+      } else if (decoded.role === 'student') {
+        req.user.student_id = decoded.user_id;
+      } else if (decoded.role === 'teacher') {
+        req.user.teacher_id = decoded.user_id;
+      }
+    }
 
     next();
   } catch (error) {

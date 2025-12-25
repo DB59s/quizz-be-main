@@ -4,6 +4,7 @@ const config = require('./env');
 // Import entities
 const Account = require('../entity/Account');
 const RefreshToken = require('../entity/RefreshToken');
+const PasswordReset = require('../entity/PasswordReset');
 
 // Log database configuration for debugging
 console.log('=== DATABASE CONFIGURATION ===');
@@ -28,7 +29,7 @@ const AppDataSource = new DataSource({
   database: config.DB_DATABASE,
   synchronize: config.DB_SYNCHRONIZE, // Enable for development, disable for production
   logging: config.DB_LOGGING,
-  entities: [Account, RefreshToken], // Add all entities here
+  entities: [Account, RefreshToken, PasswordReset], // Add all entities here
   migrations: [],
   subscribers: [],
 });
